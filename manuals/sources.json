@@ -1,0 +1,8 @@
+[
+ {"file": "pump/peerless_horizontal_centrifugal_iom.pdf", "machine": "pump",  "title": "Peerless Pump: Horizontal Centrifugal Pumps IOM"},
+ {"file": "pump/doe_pumping_system_sourcebook.pdf",       "machine": "pump",  "title": "US DOE: Improving Pumping System Performance"},
+ {"file": "fan/greenheck_usf_fan_iom.pdf",                "machine": "fan",   "title": "Greenheck: USF Utility Fan IOM"},
+ {"file": "fan/doe_fan_system_sourcebook.pdf",            "machine": "fan",   "title": "US DOE: Improving Fan System Performance"},
+ {"file": "valve/asco_8210_solenoid_valve_im.pdf",       "machine": "valve", "title": "ASCO: 8210 Series Solenoid Valve I&M"},
+ {"file": "all/osha_lockout_tagout_factsheet.pdf",        "machine": "all",   "title": "OSHA: Lockout/Tagout Fact Sheet"}
+]

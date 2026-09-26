@@ -1,0 +1,13 @@
+{
+  "machine": "fan",
+  "likely_component": "motor",
+  "fault": "loose or worn",
+  "severity": "medium",
+  "sound_evidence": "continuous humming with intermittent clattering",
+  "defect_xyz": [
+    0.026290221139788628,
+    0.21844539046287537,
+    0.4968908429145813
+  ],
+  "defect_radius": 0.12
+}

@@ -1,0 +1,44 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Gauge 3D Inspection</title>
+<style>
+body{margin:0;background:#0f1115;font-family:system-ui,sans-serif;color:#eee;overflow:hidden}
+#panel{position:absolute;top:16px;left:16px;background:#1a1d24ee;padding:14px 18px;border-radius:10px;max-width:320px;border:1px solid #333}
+#panel h2{margin:0 0 8px;font-size:16px;color:#ff5a36}
+#panel div{font-size:13px;margin:3px 0}
+.tag{background:#fff;color:#c62828;border:2px solid #d32f2f;border-radius:6px;padding:6px 10px;font-weight:700;font-size:14px;white-space:nowrap}
+.tag small{display:block;color:#333;font-weight:400;font-size:11px}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head><body><div id="panel"><h2>Suspected fault</h2><div id="info"></div></div>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {CSS2DRenderer,CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
+const q=new URLSearchParams(location.search).get('run'); const P=q?'runs/'+q+'/':'';
+const d = await (await fetch(P+'diag.json?'+Date.now())).json();
+document.getElementById('info').innerHTML =
+ `<div><b>Machine:</b> ${d.machine}</div><div><b>Component:</b> ${d.likely_component}</div>
+  <div><b>Fault:</b> ${d.fault}</div><div><b>Severity:</b> ${d.severity}</div><div><b>Heard:</b> ${d.sound_evidence}</div>`;
+const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,0.01,100);
+cam.position.set(0.3,0.6,3);
+const r=new THREE.WebGLRenderer({antialias:true}); r.setSize(innerWidth,innerHeight); r.setPixelRatio(devicePixelRatio);
+document.body.appendChild(r.domElement);
+const lr=new CSS2DRenderer(); lr.setSize(innerWidth,innerHeight); lr.domElement.style.cssText='position:absolute;top:0;pointer-events:none';
+document.body.appendChild(lr.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff,0x444444,2)); const dl=new THREE.DirectionalLight(0xffffff,1.5); dl.position.set(2,3,4); scene.add(dl);
+const ctl=new OrbitControls(cam,r.domElement); ctl.enableDamping=true; ctl.autoRotate=true; ctl.autoRotateSpeed=1;
+new GLTFLoader().load(P+'machine.glb?'+Date.now(), g=>scene.add(g.scene));
+const p=new THREE.Vector3(...d.defect_xyz), rad=d.defect_radius;
+const ring=new THREE.Mesh(new THREE.SphereGeometry(rad,32,16), new THREE.MeshBasicMaterial({color:0xff2a00,transparent:true,opacity:0.25,depthTest:false}));
+ring.position.copy(p); scene.add(ring);
+const dot=new THREE.Mesh(new THREE.SphereGeometry(0.025,16,8), new THREE.MeshBasicMaterial({color:0xff2a00,depthTest:false}));
+dot.position.copy(p); scene.add(dot);
+const lp=p.clone().add(new THREE.Vector3(0.6,0.7,0));
+scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p,lp]), new THREE.LineBasicMaterial({color:0xff2a00,depthTest:false})));
+const el=document.createElement('div'); el.className='tag';
+el.innerHTML=`SUSPECTED ${d.likely_component.toUpperCase()} FAULT<small>Acoustic anomaly: ${d.sound_evidence}</small>`;
+const tag=new CSS2DObject(el); tag.position.copy(lp); scene.add(tag);
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();r.setSize(innerWidth,innerHeight);lr.setSize(innerWidth,innerHeight)});
+r.domElement.addEventListener('pointerdown',()=>ctl.autoRotate=false);
+(function loop(t){requestAnimationFrame(loop);ring.scale.setScalar(1+0.25*Math.sin((t||0)/250));ctl.update();r.render(scene,cam);lr.render(scene,cam)})();
+</script></body></html>
