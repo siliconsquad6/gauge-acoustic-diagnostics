@@ -190,7 +190,7 @@ The scripts use fixed paths. Match this layout exactly and everything runs witho
     │   ├── combined_data_shuffled/           (created by merge_mimii_data.py)
     │   └── features_8mic/                    (created by data_preprocessing.py)
     ├── runs/gauge_combined/best_model.pt     (created by train_guage.py)
-    └── Sreeram/
+    └── team/                                  <- any folder name
         └── gauge/                            <- this repository
             └── models/
                 ├── omni/                      Qwen2.5-Omni weights
@@ -229,7 +229,8 @@ The scripts use fixed paths. Match this layout exactly and everything runs witho
 ### Step 1. Clone the repo into the expected place
 
 ```bash
-mkdir -p ~/Desktop/edge-ai/Sreeram && cd ~/Desktop/edge-ai/Sreeram
+# "team" can be any folder name, but keep this nesting: edge-ai/<folder>/gauge
+mkdir -p ~/Desktop/edge-ai/team && cd ~/Desktop/edge-ai/team
 git clone --recurse-submodules https://github.com/siliconsquad6/gauge-acoustic-diagnostics.git gauge
 cd gauge
 ```
@@ -307,7 +308,7 @@ mkdir -p ~/Downloads/6_dB_valve && unzip -q 6_dB_valve.zip -d ~/Downloads/6_dB_v
 ### Step 5. Train the fault detector (GaugeNet)
 
 ```bash
-cd ~/Desktop/edge-ai/Sreeram/gauge
+cd ~/Desktop/edge-ai/team/gauge
 python ast_model_training_scripts/merge_mimii_data.py
 python ast_model_training_scripts/data_preprocessing.py
 python ast_model_training_scripts/train_guage.py
@@ -469,7 +470,7 @@ curl 127.0.0.1:8080/v1/models     # {"data":[{"id":"gauge-omni", ...}]}
 **12b. Start Gauge, pointed at ZRT:**
 
 ```bash
-cd ~/Desktop/edge-ai/Sreeram/gauge
+cd ~/Desktop/edge-ai/team/gauge
 conda activate gauge
 python patch_vllm.py              # once; says "already patched" after that
 GAUGE_VLLM=1 GAUGE_VLLM_URL=http://127.0.0.1:8080/v1 GAUGE_VLLM_MODEL=gauge-omni python app/server.py
