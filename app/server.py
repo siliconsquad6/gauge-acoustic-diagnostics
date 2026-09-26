@@ -170,6 +170,11 @@ def describe(wav_path, machine):
     ask = (f"This is audio from {who} flagged as abnormal. {HINT.get(machine or '', '')} Reply ONLY with JSON: "
            '{"machine":"fan|pump|valve","likely_component":...,"fault":...,'
            '"severity":"low|medium|high","sound_evidence":...}')
+    if VLLM:
+        try:
+            return json.loads(re.search(r"\{.*\}", describe_vllm(wav_path, ask), re.S).group())
+        except Exception as e:
+            print("LLM endpoint describe failed, using PyTorch:", e, flush=True)
     conv = [{"role": "user", "content": [{"type": "audio", "audio": str(wav_path)}, {"type": "text", "text": ask}]}]
     text = proc.apply_chat_template(conv, add_generation_prompt=True, tokenize=False)
     audios, _, _ = process_mm_info(conv, use_audio_in_video=False)
@@ -334,6 +339,11 @@ def pick_part(d, m, y, sr):
     return d
 
 
+# ---------- vLLM endpoint (optional) ----------
+from vllm_client import VLLM, URL as VLLM_URL, describe_vllm, chat_with_tools, health as vllm_health
+print("Omni engine:", f"vLLM at {VLLM_URL}" if VLLM else "PyTorch (in-process)", flush=True)
+
+
 # ---------- API ----------
 app = FastAPI()
 
@@ -422,6 +432,10 @@ def chat(req: ChatReq):
     about = (f"Incident: {m} flagged ABNORMAL ({inc.get('score', 0) * 100:.0f}% anomaly probability). "
              f"Suspected component: {d.get('likely_component', '?')}. Fault: {d.get('fault', '?')}. "
              f"Severity: {d.get('severity', '?')}. Heard: {d.get('sound_evidence', '?')}.") if inc else f"Machine: {m}."
+    if VLLM:
+        r = vllm_chat(req, inc, d, m, q, hits, about)
+        if r is not None:
+            return r
     conv = [{"role": "system", "content": [{"type": "text", "text": SYSTEM}]}]
     for x in req.messages[:-1][-6:]:
         conv.append({"role": x["role"], "content": [{"type": "text", "text": x["content"]}]})
@@ -442,6 +456,63 @@ def chat(req: ChatReq):
         for t in streamer:
             yield t
     return StreamingResponse(stream(), media_type="text/plain")
+
+
+TOOL_NOTE = (" You can call tools: search_manuals for more excerpts, get_incident for the current fault, "
+             "get_part_visual to show where a part is, get_machine_history to check if it is getting worse. "
+             "Cite every manual fact with its number like [3].")
+
+
+def vllm_chat(req, inc, d, m, q, hits, about):
+    allh = list(hits)
+
+    def numbered(hs, start):
+        return [{"n": start + i + 1, "title": h["title"], "page": h["page"], "text": h["text"]} for i, h in enumerate(hs)]
+
+    def search_manuals(query, machine=None):
+        new = retrieve(query, machine or m); start = len(allh); allh.extend(new)
+        return numbered(new, start) or {"result": "no matching excerpts"}
+
+    def get_incident():
+        if not inc:
+            return {"result": "no active incident"}
+        return {k: inc.get(k) for k in ("machine", "asset", "status", "score", "level", "diag", "image_url", "viewer_url")}
+
+    def get_part_visual(part):
+        key = inc.get("cache_key") or m
+        return {"part": part, "image_url": fault_photo(key, part), "viewer_url": f"/viewer.html?m={key}"}
+
+    def get_machine_history(machine=None):
+        mm = machine or m
+        return {k: v[-10:] for k, v in HIST.items() if k.startswith(mm)} or {"result": "no history yet"}
+
+    funcs = dict(search_manuals=search_manuals, get_incident=get_incident,
+                 get_part_visual=get_part_visual, get_machine_history=get_machine_history)
+    ctx = "\n\n".join(f"[{i + 1}] {h['title']}, page {h['page']}:\n{h['text']}" for i, h in enumerate(hits)) \
+        or "(no manual excerpts found)"
+    msgs = [{"role": "system", "content": SYSTEM + TOOL_NOTE}]
+    msgs += [{"role": x["role"], "content": x["content"]} for x in req.messages[:-1][-6:]]
+    msgs.append({"role": "user", "content": f"{about}\n\nManual excerpts:\n{ctx}\n\nQuestion: {q}"})
+    try:
+        answer, used = chat_with_tools(msgs, funcs)
+    except Exception as e:
+        print("LLM endpoint chat failed, using PyTorch:", e, flush=True)
+        return None
+    src = [{"n": i + 1, "title": h["title"], "page": h["page"], "url": f"/manuals/{h['file']}#page={h['page']}"}
+           for i, h in enumerate(allh)]
+
+    def stream():
+        yield json.dumps({"sources": src, "machine": m, "engine": "vLLM", "tools_used": used}) + "\n"
+        for i in range(0, len(answer), 40):
+            yield answer[i:i + 40]
+    return StreamingResponse(stream(), media_type="text/plain")
+
+
+@app.get("/engine")
+def engine():
+    return {"omni_engine": "vLLM" if VLLM else "PyTorch", "vllm_url": VLLM_URL if VLLM else None,
+            "vllm": vllm_health() if VLLM else None,
+            "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None}
 
 
 app.mount("/manuals", StaticFiles(directory=MAN), name="manuals")

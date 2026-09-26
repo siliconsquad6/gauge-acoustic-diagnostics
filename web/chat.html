@@ -129,7 +129,7 @@ async function ask(q){
     while (true) {
       const {value, done} = await rd.read(); if (done) break;
       buf += dec.decode(value, {stream: true});
-      if (head) { const i = buf.indexOf('\n'); if (i < 0) continue; const meta = JSON.parse(buf.slice(0, i)); sources = meta.sources; $('mtag').textContent = meta.machine ? 'Machine: ' + meta.machine : ''; buf = buf.slice(i + 1); head = false; }
+      if (head) { const i = buf.indexOf('\n'); if (i < 0) continue; const meta = JSON.parse(buf.slice(0, i)); sources = meta.sources; $('mtag').textContent = (meta.machine ? 'Machine: ' + meta.machine : '') + (meta.engine ? ' · ' + meta.engine : '') + (meta.tools_used && meta.tools_used.length ? ' · tools: ' + meta.tools_used.join(', ') : ''); buf = buf.slice(i + 1); head = false; }
       text = buf;
       b.innerHTML = render(text, sources) + '<span class="typing"></span>';
       $('log').scrollTop = $('log').scrollHeight;
