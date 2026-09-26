@@ -1,0 +1,39 @@
+[
+  {
+    "name": "blades",
+    "file": "parts/blades.glb",
+    "keywords": [
+      "blade",
+      "impeller",
+      "rotor",
+      "fan",
+      "imbalance"
+    ]
+  },
+  {
+    "name": "motor",
+    "file": "parts/motor.glb",
+    "keywords": [
+      "motor",
+      "winding",
+      "stator",
+      "electrical"
+    ]
+  },
+  {
+    "name": "bearing",
+    "file": "parts/bearing.glb",
+    "keywords": [
+      "bearing"
+    ]
+  },
+  {
+    "name": "shaft",
+    "file": "parts/shaft.glb",
+    "keywords": [
+      "shaft",
+      "hub",
+      "coupling"
+    ]
+  }
+]

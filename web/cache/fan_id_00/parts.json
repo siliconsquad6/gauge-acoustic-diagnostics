@@ -1,0 +1,43 @@
+[
+  {
+    "name": "impeller",
+    "file": "parts/impeller.glb",
+    "keywords": [
+      "impeller",
+      "wheel",
+      "blade",
+      "rotor",
+      "unbalanc",
+      "imbalanc",
+      "clog"
+    ]
+  },
+  {
+    "name": "motor",
+    "file": "parts/motor.glb",
+    "keywords": [
+      "motor",
+      "winding",
+      "stator",
+      "electrical",
+      "voltage"
+    ]
+  },
+  {
+    "name": "bearing",
+    "file": "parts/bearing.glb",
+    "keywords": [
+      "bearing"
+    ]
+  },
+  {
+    "name": "shaft",
+    "file": "parts/shaft.glb",
+    "keywords": [
+      "shaft",
+      "coupling",
+      "hub",
+      "misalign"
+    ]
+  }
+]

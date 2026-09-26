@@ -1,0 +1,326 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Gauge 3D Inspection</title>
+<style>
+html,body{background:transparent}
+body{margin:0;font-family:Inter,system-ui,sans-serif;color:#1d1d1f;overflow:hidden}
+#panel{position:absolute;top:16px;left:16px;background:#fffffff0;padding:14px 18px;border-radius:10px;max-width:320px;border:1px solid #232833;transition:opacity .3s}
+#panel h2{margin:0 0 8px;font-size:16px;color:#0a84ff}
+#panel div{font-size:13px;margin:3px 0}
+.btns{position:absolute;right:14px;bottom:14px;display:flex;gap:8px;transition:right .45s cubic-bezier(.2,.8,.2,1)}
+.btns button,.dl a{background:#ffffffe6;border:1px solid #d2d2d7;color:#1d1d1f;padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;text-decoration:none}
+.btns button.on{border-color:#0071e3;color:#0071e3}
+.tag{background:#fff;color:#c62828;border:2px solid #d32f2f;border-radius:6px;padding:6px 10px;font-weight:700;font-size:13px;white-space:nowrap;pointer-events:auto;cursor:pointer}
+.tag small{display:block;color:#333;font-weight:400;font-size:11px}
+.tag em{display:block;font-style:normal;font-size:10.5px;color:#0a84ff;margin-top:3px}
+.half{position:absolute;top:0;bottom:0;width:50%;pointer-events:none;display:none}
+.half.l{left:0;border-right:1px solid #d2d2d7}.half.r{right:0}
+.half h3{margin:16px;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+.half.l h3{color:#ef4444}.half.r h3{color:#2fbf71}
+.half p{margin:-8px 16px 0;font-size:12px;color:#6e6e73}
+.half.l h3{color:#d70015}.half.r h3{color:#248a3d}
+body.inframe .half h3{margin-top:128px}
+.dl{position:absolute;bottom:60px;left:0;right:0;display:flex;justify-content:center;gap:8px;pointer-events:auto}
+/* hover tooltip */
+#tip{position:absolute;pointer-events:none;background:#fffffff5;border:1px solid #d2d2d7;box-shadow:0 6px 20px #0002;border-radius:8px;padding:7px 10px;font-size:12px;display:none;transform:translate(14px,14px);white-space:nowrap}
+#tip b{text-transform:uppercase;letter-spacing:.5px}
+#tip .bad{color:#ef4444}#tip .ok{color:#2fbf71}#tip small{display:block;color:#6e6e73;margin-top:2px}
+/* inspection drawer */
+#drawer{position:absolute;top:0;right:0;bottom:0;width:min(440px,92vw);background:#0f1217;border-left:1px solid #232833;transform:translateX(100%);transition:transform .45s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;box-shadow:none}
+#drawer.open{transform:none;box-shadow:-20px 0 60px #0003}
+#dhead{padding:14px 16px;border-bottom:1px solid #232833;display:flex;align-items:center;gap:10px}
+#dhead .dot{width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px #ef4444}
+#dhead .dot.ok{background:#2fbf71;box-shadow:0 0 10px #2fbf71}
+#dhead b{font-size:15px;text-transform:capitalize}#dhead span{color:#8a93a3;font-size:12px}
+#dclose{margin-left:auto;background:none;border:1px solid #232833;color:#eee;border-radius:7px;width:30px;height:30px;cursor:pointer;font-size:16px}
+#dactions{display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid #232833}
+#dactions a{flex:1;text-align:center;font-size:12px;padding:7px;border-radius:7px;border:1px solid #232833;color:#eee;text-decoration:none;background:#171b22}
+#dactions a:hover{border-color:#0a84ff}
+#dframe{flex:1 1 0;height:0;min-height:0;border:0;width:100%;background:#0b0d11;display:block}
+#focusbar{position:absolute;left:50%;bottom:18px;transform:translate(-50%,160%);display:flex;align-items:center;gap:12px;background:#fffffff5;border:1px solid #d2d2d7;border-radius:12px;padding:10px 12px 10px 14px;transition:transform .4s cubic-bezier(.2,.8,.2,1);box-shadow:0 10px 30px #0002}
+#focusbar.show{transform:translate(-50%,0)}
+#focusbar b{text-transform:capitalize}#focusbar small{display:block;color:#6e6e73;font-size:11.5px}
+#focusbar button{border-radius:8px;padding:7px 11px;font-size:12px;cursor:pointer;border:1px solid #d2d2d7;background:#f5f5f7;color:#1d1d1f}
+#focusbar #fask{background:#0071e3;border-color:#0071e3;color:#fff;font-weight:700}
+.hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font-size:12px;color:#6e6e73;background:#ffffffd9;border:1px solid #d2d2d7;padding:6px 12px;border-radius:20px;pointer-events:none;transition:opacity .4s}
+@media(max-width:900px){.hint{display:none!important}}
+body.inframe #drawer{display:none!important}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head><body>
+<div id="panel"><h2>Suspected fault</h2><div id="info"></div></div>
+<div class="half l" id="hl"><h3>Defective</h3><p id="pl"></p><div class="dl" id="dl-l"></div></div>
+<div class="half r" id="hr"><h3>Fixed</h3><p id="pr"></p><div class="dl" id="dl-r"></div></div>
+<div class="btns" id="btns"><button id="cmp" style="display:none">Compare + print</button><button id="xray" style="display:none">X-ray: on</button></div>
+<div id="tip"></div>
+<div class="hint" id="hint" style="display:none">Click a part to zoom in · click the red label for the repair guide</div>
+<div id="focusbar"><i class="dot" id="fdot" style="width:10px;height:10px;border-radius:50%;display:inline-block"></i><div><b id="fname"></b><small id="fsub"></small></div><button id="fask">Repair guide</button><button id="fback">Back</button></div>
+<div id="drawer">
+  <div id="dhead"><i class="dot" id="ddot"></i><div><b id="dname"></b><br><span id="dsub"></span></div><button id="dclose" title="Close">×</button></div>
+  <div id="dactions"><a id="dcmp" href="#">Compare + print</a><a id="dpdf" href="#" target="_blank">Open full chat</a></div>
+  <iframe id="dframe" title="Repair assistant"></iframe>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {CSS2DRenderer, CSS2DObject} from 'three/addons/renderers/CSS2DRenderer.js';
+
+const $ = id => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
+const m = Q.get('m') || 'valve', COMPARE = Q.get('compare') === '1', INCIDENT = Q.get('incident') || '', HEALTHY = Q.get('healthy') === '1';
+const INFRAME = window.top !== window;
+if (!INFRAME) document.documentElement.style.background = '#f5f5f7'; else document.body.classList.add('inframe');
+const P = 'cache/' + m + '/', T = '?' + Date.now();
+const SCORE = Math.min(1, Math.max(0, parseFloat(Q.get('score') || '0.9')));   // anomaly score scales the fault visuals
+const SEV = 0.55 + 0.9 * SCORE;
+const XR = 0.32;   // x-ray housing opacity
+const d = await (await fetch(P + 'diag.json' + T)).json();
+$('info').innerHTML =
+  `<div><b>Machine:</b> ${d.machine}</div><div><b>Component:</b> ${d.likely_component}</div>
+   <div><b>Fault:</b> ${d.fault}</div><div><b>Severity:</b> ${d.severity}</div><div><b>Heard:</b> ${d.sound_evidence}</div>`;
+
+const loader = new GLTFLoader();
+const load = url => new Promise(res => loader.load(url, g => res(g.scene), undefined, () => res(null)));
+const exists = async url => { try { return (await fetch(url, {method: 'HEAD'})).ok; } catch { return false; } };
+const meshesOf = o => { const a = []; o.traverse(c => c.isMesh && a.push(c)); return a; };
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+let parts = [];
+try { parts = await (await fetch(P + 'parts.json' + T)).json(); } catch {}
+const comp = (d.likely_component || '').toLowerCase();
+let hit = parts.findIndex(p => p.keywords.some(k => comp.includes(k)));
+if (parts.length && hit < 0) hit = 0;
+if (HEALTHY) hit = -1;
+const faultyName = parts.length && hit >= 0 ? parts[hit].name : d.likely_component;
+
+// ---------- build one scene: kind = 'single' | 'defect' | 'fixed' ----------
+async function build(kind) {
+  const scene = new THREE.Scene(), glow = [], shell = [], items = [];
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa0aa, 1.8));
+  const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(2, 3, 4); scene.add(key);
+  const rim = new THREE.DirectionalLight(0x88aaff, 0.8); rim.position.set(-3, 1, -3); scene.add(rim);
+
+  const housing = await load(P + 'machine.glb' + T);
+  if (housing) { meshesOf(housing).forEach(s => { s.geometry.computeVertexNormals(); s.material = s.material.clone(); s.material.side = THREE.DoubleSide; shell.push(s); }); scene.add(housing); }
+  const box = housing ? new THREE.Box3().setFromObject(housing) : new THREE.Box3(new THREE.Vector3(-1,-1,-1), new THREE.Vector3(1,1,1));
+  const C = box.getCenter(new THREE.Vector3()), S = box.getSize(new THREE.Vector3()).length() / Math.sqrt(3);
+  const defect = new THREE.Vector3(...(d.defect_xyz || [C.x, C.y, C.z]));
+  let target = defect.clone();
+
+  if (parts.length) {
+    const inside = C.clone().lerp(defect, 0.55), n = parts.length, axis = S * 0.55;
+    let slot = 0;
+    for (let i = 0; i < n; i++) {
+      const p = parts[i], isFault = i === hit;
+      let file = P + p.file;
+      if (isFault && kind !== 'fixed' && await exists(P + `parts/print/${p.name}_defect.glb`)) file = P + `parts/print/${p.name}_defect.glb`;
+      const obj = await load(file + T);
+      if (!obj) continue;
+      obj.scale.setScalar(S * (isFault ? 0.34 : 0.26));
+      if (isFault) obj.position.copy(inside);
+      else { const t = n > 2 ? (slot / (n - 2)) - 0.5 : 0; obj.position.set(C.x + t * axis, C.y, C.z); slot++; }
+      const mats = [];
+      meshesOf(obj).forEach(s => {
+        s.geometry.computeVertexNormals();
+        s.material = s.material.clone(); s.material.side = THREE.DoubleSide; mats.push(s.material);
+        s.userData.part = p.name;
+        if (isFault && kind === 'fixed') { s.material.emissive = new THREE.Color(0x2fbf71); s.material.emissiveIntensity = 0.35; }
+        else if (isFault) { s.material.emissive = new THREE.Color(0xff2a00); s.material.emissiveIntensity = 0.6; glow.push(s.material); }
+        else { s.material.color = new THREE.Color(0x5b6573); s.material.vertexColors = false; s.material.metalness = 0.6; s.material.roughness = 0.4; }
+      });
+      scene.add(obj);
+      items.push({name: p.name, obj, mats, isFault, home: obj.position.clone(), rot: obj.rotation.y});
+      if (isFault) target = inside.clone();
+    }
+    shell.forEach(s => {
+      s.material.transparent = true; s.material.opacity = XR; s.material.depthWrite = false;
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(s.geometry, 35),
+        new THREE.LineBasicMaterial({color: 0x2c3a4f, transparent: true, opacity: 0.28, depthWrite: false}));
+      e.raycast = () => {}; s.add(e);
+    });
+  }
+  let halo = null;
+  if (kind !== 'fixed' && !HEALTHY) {
+    halo = new THREE.Mesh(new THREE.SphereGeometry((parts.length ? S * 0.2 : (d.defect_radius || 0.1)) * SEV, 32, 16),
+      new THREE.MeshBasicMaterial({color: 0xff2a00, transparent: true, opacity: parts.length ? 0.12 : 0.25, depthTest: false}));
+    halo.position.copy(target); halo.userData.part = faultyName; scene.add(halo);
+  }
+  return {scene, glow, shell, halo, items, C, S, target};
+}
+
+// ---------- renderer + camera ----------
+const r = new THREE.WebGLRenderer({antialias: true, alpha: true});
+r.setSize(innerWidth, innerHeight); r.setPixelRatio(devicePixelRatio);
+document.body.appendChild(r.domElement);
+const cam = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 100);
+const ctl = new OrbitControls(cam, r.domElement); ctl.enableDamping = true; ctl.autoRotate = true; ctl.autoRotateSpeed = 1;
+
+const views = COMPARE ? [await build('defect'), await build('fixed')] : [await build('single')];
+const A = views[0];
+ctl.target.copy(A.C);
+cam.position.copy(A.C).add(new THREE.Vector3(A.S * 0.4, A.S * 0.5, A.S * (COMPARE ? 3.2 : 2.6)));
+ctl.update();
+
+// ---------- camera fly animation ----------
+let fly = null;
+function flyTo(pos, tgt, ms = 900) { fly = {p0: cam.position.clone(), t0: ctl.target.clone(), p1: pos, t1: tgt, start: performance.now(), ms}; ctl.enabled = false; }
+
+// ---------- single view: label, x-ray, click-to-inspect ----------
+let lr = null, tagObj = null, line = null, focused = null, home = null, xrayOn = true;
+const setShell = op => A.shell.forEach(s => { s.material.transparent = op < 1; s.material.opacity = op; s.material.depthWrite = op >= 1; s.material.needsUpdate = true; });
+
+if (!COMPARE) {
+  lr = new CSS2DRenderer(); lr.setSize(innerWidth, innerHeight);
+  lr.domElement.style.cssText = 'position:absolute;top:0;pointer-events:none';
+  document.body.appendChild(lr.domElement);
+  const lp = A.target.clone().add(new THREE.Vector3(A.S * 0.28, A.S * 0.55, 0));
+  line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([A.target, lp]), new THREE.LineBasicMaterial({color: 0xff2a00, depthTest: false}));
+  A.scene.add(line);
+  const el = document.createElement('div'); el.className = 'tag';
+  el.innerHTML = `SUSPECTED ${String(faultyName).toUpperCase()} FAULT<small>Acoustic anomaly: ${d.sound_evidence}</small>${parts.length ? '<em>Click to inspect and fix</em>' : ''}`;
+  tagObj = new CSS2DObject(el); tagObj.position.copy(lp); A.scene.add(tagObj);
+
+  if (parts.length) {
+    $('xray').style.display = 'block';
+    $('xray').onclick = () => { xrayOn = !xrayOn; if (!focused) setShell(xrayOn ? XR : 1); $('xray').textContent = 'X-ray: ' + (xrayOn ? 'on' : 'off'); };
+    $('hint').style.display = 'block';
+    el.onclick = () => openDrawer(A.items.find(i => i.isFault));
+  }
+}
+
+if (HEALTHY) { if (tagObj) tagObj.visible = false; if (line) line.visible = false; $('hint').textContent = 'Drag to rotate · click any part to zoom in'; }
+
+// hover + click picking (click = pointer up without dragging)
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+const pickables = () => [...A.items.flatMap(i => meshesOf(i.obj)), ...(A.halo ? [A.halo] : [])];
+function pick(e) {
+  const b = r.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);
+  ray.setFromCamera(mouse, cam);
+  const h = ray.intersectObjects(pickables(), false)[0];
+  return h ? A.items.find(i => i.name === h.object.userData.part) : null;
+}
+let down = null;
+r.domElement.addEventListener('pointerdown', e => { down = {x: e.clientX, y: e.clientY}; ctl.autoRotate = false; });
+r.domElement.addEventListener('pointermove', e => {
+  if (COMPARE || !A.items.length) return;
+  const it = pick(e), tip = $('tip');
+  r.domElement.style.cursor = it ? 'pointer' : 'grab';
+  if (!it) { tip.style.display = 'none'; return; }
+  tip.style.display = 'block'; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px';
+  tip.innerHTML = `<b class="${it.isFault ? 'bad' : 'ok'}">${it.name}</b> · ${it.isFault ? 'suspected fault' : 'healthy'}<small>Click to inspect</small>`;
+});
+r.domElement.addEventListener('pointerup', e => {
+  if (COMPARE || !down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
+  const it = pick(e); if (it) inspect(it);
+});
+
+function inspect(it) {
+  if (!it) return;
+  if (!focused) home = {pos: cam.position.clone(), tgt: ctl.target.clone()};
+  if (focused && focused !== it) restorePart(focused);
+  focused = it;
+  ctl.autoRotate = false;
+  // isolate: fade the shell and every other part, lift this part out of the machine
+  setShell(0.05);
+  A.items.forEach(o => o.mats.forEach(mt => { mt.transparent = o !== it; mt.opacity = o === it ? 1 : 0.15; mt.depthWrite = o === it; }));
+  if (A.halo) A.halo.visible = false;
+  if (tagObj) tagObj.visible = false; if (line) line.visible = false;
+  $('hint').style.opacity = 0; $('panel').style.opacity = 0; $('tip').style.display = 'none';
+  it.lift = {from: it.obj.position.clone(), to: it.home.clone().add(new THREE.Vector3(0, A.S * 0.45, 0)), start: performance.now()};
+  const focus = it.lift.to.clone();
+  const dir = cam.position.clone().sub(ctl.target).normalize();
+  flyTo(focus.clone().add(dir.multiplyScalar(A.S * 1.15)).add(new THREE.Vector3(A.S * 0.35, 0, 0)), focus);
+  $('fname').textContent = it.name;
+  $('fsub').textContent = it.isFault ? `suspected fault · ${d.fault}` : 'healthy';
+  $('fdot').style.background = it.isFault ? '#ef4444' : '#2fbf71';
+  $('focusbar').classList.add('show');
+}
+function restorePart(it) { it.lift = {from: it.obj.position.clone(), to: it.home.clone(), start: performance.now()}; it.obj.rotation.y = it.rot; }
+function closeInspect() {
+  if (!focused) return;
+  restorePart(focused); focused = null;
+  setShell(xrayOn ? XR : 1);
+  A.items.forEach(o => o.mats.forEach(mt => { mt.transparent = false; mt.opacity = 1; mt.depthWrite = true; }));
+  if (A.halo) A.halo.visible = true;
+  if (tagObj) tagObj.visible = true; if (line) line.visible = true;
+  $('panel').style.opacity = 1;
+  $('focusbar').classList.remove('show');
+  if (home) flyTo(home.pos, home.tgt);
+}
+function openDrawer(it) {
+  $('dname').textContent = it.name;
+  $('dsub').textContent = it.isFault ? `${d.machine} · ${d.fault} · ${d.severity} severity` : `${d.machine} · healthy · inspection guide`;
+  $('ddot').className = 'dot' + (it.isFault ? '' : ' ok');
+  const q = new URLSearchParams({embed: '1', m, part: it.name, fault: it.isFault ? '1' : '0'});
+  if (INCIDENT) q.set('incident', INCIDENT);
+  const url = '/chat.html?' + q.toString();
+  if ($('dframe').dataset.src !== url) { $('dframe').src = url; $('dframe').dataset.src = url; }
+  $('dpdf').href = url.replace('embed=1&', '');
+  $('dcmp').href = `?m=${m}&compare=1${INCIDENT ? '&incident=' + INCIDENT : ''}`;
+  $('dcmp').style.display = it.isFault ? 'block' : 'none';
+  if (INFRAME) {
+    parent.postMessage({type: 'open-chat', url, name: it.name, sub: $('dsub').textContent, fault: it.isFault,
+                        compare: it.isFault ? `/viewer.html?m=${m}&compare=1${INCIDENT ? '&incident=' + INCIDENT : ''}` : ''}, '*');
+    return;
+  }
+  $('drawer').classList.add('open'); $('btns').style.right = 'calc(min(440px,92vw) + 14px)';
+}
+function closeDrawer() { $('drawer').classList.remove('open'); $('btns').style.right = '14px'; }
+$('dclose').onclick = closeDrawer;
+$('fback').onclick = closeInspect;
+$('fask').onclick = () => openDrawer(focused);
+const openFault = () => { const f = A.items.find(i => i.isFault); if (f) openDrawer(f); };
+addEventListener('message', e => { if (e.data === 'inspect-fault') openFault(); });
+if (Q.get('inspect') === '1') setTimeout(openFault, 1200);
+addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('drawer').classList.contains('open')) closeDrawer(); else closeInspect(); } });
+
+// ---------- compare mode UI ----------
+if (COMPARE) {
+  $('panel').style.display = 'none';
+  ['hl', 'hr'].forEach(id => $(id).style.display = 'block');
+  $('pl').textContent = `${faultyName}: ${d.fault}`;
+  $('pr').textContent = `${faultyName}: replacement part`;
+  for (const [side, tag] of [['l', 'defect'], ['r', 'fixed']]) {
+    const box = $('dl-' + side);
+    for (const ext of ['stl', 'obj']) {
+      const url = P + `parts/print/${faultyName}_${tag}.${ext}`;
+      if (await exists(url)) box.insertAdjacentHTML('beforeend', `<a href="${url}" download>Download ${ext.toUpperCase()}</a>`);
+    }
+    if (!box.innerHTML) box.innerHTML = '<span style="font-size:12px;color:#8a93a3">run export_parts_print.py to enable downloads</span>';
+  }
+}
+if (parts.length && !HEALTHY) {
+  const c = $('cmp'); c.style.display = 'block';
+  c.textContent = COMPARE ? 'Single view' : 'Compare + print';
+  if (COMPARE) c.classList.add('on');
+  c.onclick = () => { Q.set('compare', COMPARE ? '0' : '1'); location.search = Q.toString(); };
+}
+
+// ---------- render loop ----------
+addEventListener('resize', () => { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); r.setSize(innerWidth, innerHeight); if (lr) lr.setSize(innerWidth, innerHeight); });
+(function loop(t) {
+  requestAnimationFrame(loop);
+  const now = performance.now(), k = Math.sin((t || 0) / (420 - 260 * SCORE));
+  views.forEach(v => { if (v.halo) v.halo.scale.setScalar(1 + 0.2 * k); v.glow.forEach(mt => mt.emissiveIntensity = (0.25 + 0.55 * SCORE) + 0.35 * SCORE * (k + 1) / 2); });
+  if (fly) {
+    const e = ease(Math.min(1, (now - fly.start) / fly.ms));
+    cam.position.lerpVectors(fly.p0, fly.p1, e); ctl.target.lerpVectors(fly.t0, fly.t1, e);
+    if (e >= 1) { fly = null; ctl.enabled = true; }
+  }
+  A.items.forEach(it => {
+    if (it.lift) { const e = ease(Math.min(1, (now - it.lift.start) / 800)); it.obj.position.lerpVectors(it.lift.from, it.lift.to, e); if (e >= 1) it.lift = null; }
+    if (it === focused) it.obj.rotation.y += 0.008;
+  });
+  ctl.update();
+  const W = innerWidth, H = innerHeight;
+  if (COMPARE) {
+    cam.aspect = (W / 2) / H; cam.updateProjectionMatrix();
+    r.setScissorTest(true);
+    views.forEach((v, i) => { r.setViewport(i * W / 2, 0, W / 2, H); r.setScissor(i * W / 2, 0, W / 2, H); r.render(v.scene, cam); });
+    r.setScissorTest(false);
+  } else {
+    cam.aspect = W / H; cam.updateProjectionMatrix();
+    r.setViewport(0, 0, W, H); r.render(A.scene, cam); lr.render(A.scene, cam);
+  }
+})();
+</script></body></html>

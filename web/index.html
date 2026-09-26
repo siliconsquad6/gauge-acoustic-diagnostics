@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gauge · Acoustic Machine Health</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f5f7; --card:#ffffff; --ink:#1d1d1f; --ink2:#424245; --muted:#6e6e73; --line:#e5e5ea; --soft:#f5f5f7;
+  --blue:#0066cc; --blue-hi:#0071e3; --bad:#d70015; --warn:#b25000; --ok:#248a3d;
+  --bad-bg:#fff1f2; --warn-bg:#fff6ea; --ok-bg:#eefaf1; --blue-bg:#eef5ff;
+  --r:22px; --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue)}
+.nav{position:sticky;top:0;z-index:40;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;background:rgba(245,245,247,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.06)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.2px}
+.mark{width:22px;height:22px;border-radius:50%;background:conic-gradient(from 210deg,#0071e3,#34c7ff,#0071e3);position:relative}
+.mark:after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--bg)}
+.navr{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:980px;background:#fff;border:1px solid var(--line);font-weight:500;color:var(--ink2)}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.wrap{max-width:1480px;margin:0 auto;padding:26px 32px 48px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:20px}
+.head h1{margin:0;font-size:40px;line-height:1.08;font-weight:700;letter-spacing:-1.1px}
+.head h1 span{color:var(--muted)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.st{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:980px;background:#fff;border:1px solid var(--line);font-size:12.5px;color:var(--muted);transition:.25s}
+.st b{font-weight:600;color:var(--ink2)}
+.st i{width:16px;height:16px;border-radius:50%;border:2px solid #d2d2d7;flex:none;position:relative}
+.st.run{border-color:var(--blue-hi);color:var(--ink)} .st.run i{border-color:var(--blue-hi);border-top-color:transparent;animation:spin .8s linear infinite}
+.st.done i{border-color:var(--ok);background:var(--ok)} .st.done i:after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.st.skip{opacity:.45}
+@keyframes spin{to{transform:rotate(360deg)}}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:20px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:22px;min-width:0}
+.card h3{margin:0 0 4px;font-size:19px;font-weight:700;letter-spacing:-.3px}
+.card .sub{margin:0 0 14px;font-size:13px;color:var(--muted)}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.empty{color:var(--muted);font-size:13.5px;padding:18px 0;text-align:center}
+.stage{grid-column:span 8;position:relative;min-height:680px;border-radius:28px;overflow:hidden;background:radial-gradient(120% 95% at 50% 38%,#ffffff 0%,#eef0f4 55%,#dfe3ea 100%);border:1px solid rgba(0,0,0,.06);box-shadow:0 20px 60px rgba(0,0,0,.08)}
+.stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.stage-top{position:absolute;left:28px;top:24px;right:28px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:2}
+.stage-title{color:#1d1d1f}
+.stage-title .k{font-size:12px;font-weight:600;letter-spacing:.3px;color:#6e6e73;text-transform:uppercase}
+.stage-title .n{font-size:30px;font-weight:700;letter-spacing:-.6px;line-height:1.15}
+.stage-title .u{font-size:14px;color:#6e6e73;margin-top:2px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:980px;font-size:12.5px;font-weight:700;letter-spacing:.2px}
+.chip.bad{background:rgba(215,0,21,.08);color:#d70015;border:1px solid rgba(215,0,21,.3)}
+.chip.ok{background:rgba(36,138,61,.1);color:#248a3d;border:1px solid rgba(36,138,61,.3)}
+.chip.idle{background:rgba(0,0,0,.05);color:#6e6e73;border:1px solid rgba(0,0,0,.1)}
+.stage-tools{position:absolute;left:24px;bottom:22px;display:flex;gap:8px;z-index:2}
+.gbtn{background:rgba(255,255,255,.85);color:#1d1d1f;border:1px solid rgba(0,0,0,.12);padding:8px 14px;border-radius:980px;font-size:13px;font-weight:500;cursor:pointer;backdrop-filter:blur(12px)}
+.gbtn:hover{background:#fff}
+.stage.full{position:fixed;inset:0;height:auto;z-index:60;border-radius:0}
+.side{grid-column:span 4;display:flex;flex-direction:column;gap:20px}
+#drop{border:1.5px dashed #c7c7cc;border-radius:16px;padding:18px;text-align:center;cursor:pointer;transition:.15s;background:var(--soft)}
+#drop:hover,#drop.drag{border-color:var(--blue-hi);background:var(--blue-bg)}
+#drop b{display:block;font-size:14.5px}#drop small{color:var(--muted);font-size:12.5px}
+#fname{font-size:12.5px;color:var(--muted);margin-top:10px;word-break:break-all}
+#wave{width:100%;height:46px;display:none;margin-top:8px}
+audio{width:100%;height:34px;margin-top:8px;display:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:980px;padding:11px 20px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:.15s;font-family:inherit}
+.btn.primary{background:var(--blue-hi);color:#fff}.btn.primary:hover{background:#0077ed}
+.btn.primary:disabled{background:#b8d6f7;cursor:not-allowed}
+.btn.ghost{background:var(--blue-bg);color:var(--blue)}.btn.ghost:hover{background:#e1eeff}
+.btn.full{width:100%;margin-top:14px}
+.err{color:var(--bad);font-size:13px;margin-top:8px}
+.verdict{display:flex;align-items:center;gap:18px}
+.ring{width:96px;height:96px;flex:none}
+.vstate{font-size:30px;font-weight:800;letter-spacing:-.6px;line-height:1.1}
+.vstate.bad{color:var(--bad)}.vstate.ok{color:var(--ok)}
+.lvl{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:980px;font-size:11.5px;font-weight:700;letter-spacing:.3px}
+.lvl-critical{background:var(--bad-bg);color:var(--bad)}.lvl-warning,.lvl-watch{background:var(--warn-bg);color:var(--warn)}.lvl-normal{background:var(--ok-bg);color:var(--ok)}
+.meta{font-size:12.5px;color:var(--muted);margin-top:4px}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:9px 12px;margin-top:18px;font-size:14px}
+.kv span:nth-child(odd){color:var(--muted)}
+.sev{display:inline-block;padding:1px 9px;border-radius:980px;font-size:12px;font-weight:700;text-transform:uppercase}
+.sev-low{background:var(--ok-bg);color:var(--ok)}.sev-medium{background:var(--warn-bg);color:var(--warn)}.sev-high{background:var(--bad-bg);color:var(--bad)}
+.btns{display:flex;gap:10px;margin-top:18px}.btns .btn{flex:1;font-size:14px;padding:10px 14px}
+.c4{grid-column:span 4}.c8{grid-column:span 8}
+#figWrap{position:relative;border-radius:16px;overflow:hidden;background:var(--soft);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;cursor:zoom-in}
+#fig{width:100%;height:100%;object-fit:contain;display:none}
+.figcap{font-size:12.5px;color:var(--muted);margin-top:10px}
+.evhead{font-size:14.5px;line-height:1.5;margin-bottom:12px;color:var(--ink2)} .evhead b{color:var(--ink)}
+#spec{width:100%;height:200px;display:block;cursor:crosshair}
+.scale{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin:6px 0 10px 46px}
+.scale i{flex:0 0 96px;height:6px;border-radius:3px;background:linear-gradient(90deg,#0b1020,#0a3a8c,#0a84ff,#9fd0ff,#fff);border:1px solid var(--line)}
+.howto{font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--soft);border-radius:12px;padding:10px 12px}
+.howto b{color:var(--ink)}
+.bandlist{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:13px}
+.bandlist div{display:flex;gap:8px;align-items:baseline}
+.bandlist .n{flex:none;width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;background:var(--ink);color:#fff}
+.bandlist .n.s{background:#d2d2d7;color:var(--ink)}
+.snd{display:grid;grid-template-columns:26px 1fr 46px;gap:3px 10px;align-items:center;margin-bottom:12px;font-size:14px}
+.snd .ic{font-size:16px;text-align:center;color:var(--muted)}
+.snd .nm b{font-weight:600}.snd .nm small{display:block;color:var(--muted);font-size:12px}
+.snd .bar{grid-column:2/3;height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+.snd .bar i{display:block;height:100%;border-radius:0 4px 4px 0;background:#c7c7cc}
+.snd.top .bar i{background:var(--blue-hi)} .snd.top .ic{color:var(--blue-hi)}
+.snd .pct{grid-row:1/3;grid-column:3;text-align:right;font-weight:700;font-size:13px;color:var(--muted)}
+.snd.top .pct{color:var(--blue)}
+.where{display:grid;grid-template-columns:128px 1fr;gap:16px;align-items:center;margin-top:8px;padding-top:16px;border-top:1px solid var(--line)}
+#dial{width:128px;height:128px}
+.where p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.5}
+#trend{width:100%;height:190px;display:block}
+.trendtxt{font-size:13px;color:var(--muted);margin-top:8px}
+#hist{display:flex;flex-direction:column;gap:8px}
+.hrow{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:12px;background:var(--soft);cursor:pointer;font-size:13.5px}
+.hrow:hover{background:#ececf0}.hrow small{color:var(--muted)}
+.tag{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:980px;white-space:nowrap}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}.tag.ok{background:var(--ok-bg);color:var(--ok)}
+#toast{position:fixed;top:64px;left:50%;transform:translate(-50%,-260%);opacity:0;z-index:70;display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);border:1px solid rgba(215,0,21,.25);border-radius:18px;padding:12px 12px 12px 14px;box-shadow:0 18px 50px rgba(215,0,21,.18);transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .3s}
+#toast.show{transform:translate(-50%,0);opacity:1}
+#toast .ti{width:34px;height:34px;border-radius:50%;background:var(--bad);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;animation:pulse 1.3s infinite}
+#toast.lvl-watch .ti,#toast.lvl-warning .ti{background:var(--warn)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(215,0,21,.45)}70%{box-shadow:0 0 0 12px rgba(215,0,21,0)}100%{box-shadow:0 0 0 0 rgba(215,0,21,0)}}
+#toast b{display:block;font-size:14.5px}#toast span{font-size:12.5px;color:var(--muted)}
+#toast .x{background:none;border:0;font-size:20px;color:var(--muted);cursor:pointer;padding:0 4px}
+#tip{position:fixed;pointer-events:none;background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12.5px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:none;z-index:90}
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:95;cursor:zoom-out}
+#lightbox img{max-width:88vw;max-height:88vh;border-radius:16px;background:#fff}
+@media(max-width:1180px){.stage,.side,.c4,.c8{grid-column:span 12}.stage{min-height:560px}.head{flex-direction:column;align-items:flex-start}}
+
+/* ===== one-screen layout ===== */
+html,body{height:100%;overflow:hidden}
+body{display:flex;flex-direction:column}
+.nav{position:relative;flex:none;height:66px;padding:0 28px}
+.brand{font-size:30px;font-weight:800;letter-spacing:-.8px;gap:12px}
+.mark{width:32px;height:32px}.mark:after{inset:8px}
+.wrap{flex:1;min-height:0;display:flex;flex-direction:column;max-width:none;width:100%;margin:0;padding:14px 24px 18px}
+.head{flex:none;margin-bottom:14px;align-items:center}
+.head h1{font-size:26px;letter-spacing:-.6px;white-space:nowrap}
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.78fr) minmax(300px,.86fr);gap:16px;transition:grid-template-columns .35s}
+.grid.chat-open{grid-template-columns:minmax(320px,390px) minmax(0,1.6fr) minmax(260px,.7fr) minmax(270px,.75fr)}
+.chip{white-space:nowrap}
+.stage{grid-column:auto;min-height:0;height:100%}
+.side,.evcol{grid-column:auto;display:flex;flex-direction:column;gap:16px;min-height:0;min-width:0}
+.card{padding:16px 18px;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.card h3{font-size:17px}
+.card .sub{margin:0 0 10px;font-size:12.5px}
+#listenCard{flex:none}#listenCard .sub{display:none}
+#vCard{flex:none}
+#micCard{flex:1 1 0;min-height:120px}
+#fvCard{flex:1}#whyCard{flex:1.45}#sndCard{flex:none}
+#figWrap{aspect-ratio:auto;flex:1;min-height:0}
+#specWrap{flex:1;min-height:150px;position:relative;display:none}
+#spec{position:absolute;inset:0;width:100%;height:100%}
+.s3hint{position:absolute;left:10px;bottom:8px;font-size:11px;color:var(--muted);pointer-events:none}
+ #whyCard{}
+#whyCard .eyebrow,#whyCard #specX{display:none!important}
+.darkt{color:var(--ink)!important;font-size:13px!important;font-weight:700!important;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px!important}
+/* live receiver */
+#rxCard{flex:none}
+#rxWave{flex:1;min-width:60px;height:38px;display:block;border-radius:10px;background:var(--soft)}
+#rxCard h3{margin-bottom:8px}
+.rxrow{display:flex;gap:8px;align-items:center}.rxrow .btn{flex:none;font-size:13px;padding:9px 14px;white-space:nowrap}
+.rxmsg{font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rxmsg a{font-weight:600}.rxmsg .bad{color:var(--bad);font-weight:700}.rxmsg .ok{color:var(--ok);font-weight:700}
+.rxfoot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:var(--muted)}
+.rxauto{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink2);font-weight:500}.rxauto input{accent-color:var(--blue-hi)}
+.rxdot{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.3px}
+.rxdot i{width:8px;height:8px;border-radius:50%;background:#c7c7cc}
+.rxdot.on{color:var(--bad)}.rxdot.on i{background:var(--bad);animation:pulse 1.3s infinite}
+.cardhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.seg{display:flex;background:var(--soft);border-radius:980px;padding:2px;flex:none}
+.seg button{border:0;background:none;font:600 11.5px Inter,system-ui,sans-serif;color:var(--muted);padding:4px 10px;border-radius:980px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+#micBody{flex:1;min-height:0;display:flex;align-items:center;gap:14px}
+#micWrap{height:100%;max-height:220px;aspect-ratio:1;max-width:58%;position:relative;flex:none}
+#mic{position:absolute;inset:0;width:100%;height:100%}
+.mictxt{font-size:13px;color:var(--ink2);line-height:1.5}.mictxt b{display:block;font-size:15px;color:var(--ink);margin-bottom:4px}
+body.inframe-guard{}
+#specX{flex:none}
+.evhead{font-size:13px;margin-bottom:8px}
+.scale{margin:4px 0 6px 46px}
+.howto{display:none}
+.bandlist{display:none}
+.snd{grid-template-columns:20px 96px 1fr 38px;gap:0 8px;margin-bottom:6px;font-size:13px}
+.snd .bar{grid-column:3;grid-row:1}.snd .pct{grid-row:1;grid-column:4}.snd>span:nth-child(4){display:none}
+.snd .nm small{display:none}
+.where{grid-template-columns:92px 1fr;gap:12px;margin-top:2px;padding-top:10px}
+#dial{width:92px;height:92px}
+.where p{font-size:12.5px}
+#drop{padding:12px}
+#wave{height:34px;visibility:hidden;position:absolute;pointer-events:none}
+.btn.full{margin-top:10px}
+.ring{width:76px;height:76px}
+.vstate{font-size:24px}
+.kv{grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:12px;font-size:13.5px}
+.kv>div{min-width:0}.kv>div small{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.kv>div span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btns{margin-top:12px}.btns .btn{white-space:nowrap}
+#toast{top:8px}
+/* empty 3D stage */
+.stage-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;color:var(--muted);padding:24px}
+.stage-empty svg{width:84px;height:84px;color:#c7c7cc}
+.stage-empty b{font-size:18px;color:var(--ink2);font-weight:600}
+.stage-empty span{font-size:13.5px;max-width:340px}
+.stage.loading .stage-empty svg{color:var(--blue-hi);animation:bob 1.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(8deg)}}
+#viewer{display:none}
+/* repair chat: its own column on the left */
+#chatPanel{display:none;flex-direction:column;background:#fff;border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;min-height:0;min-width:0}
+.grid.chat-open #chatPanel{display:flex}
+#cpHead{display:flex;align-items:flex-start;gap:12px;padding:16px 16px 10px;border-bottom:1px solid #e5e5ea}
+#cpHead .dot{width:10px;height:10px;border-radius:50%;background:var(--bad);margin-top:7px;flex:none}
+#cpHead .dot.ok{background:var(--ok)}
+#cpHead .k{font-size:11.5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--muted)}
+#cpHead b{display:block;font-size:18px;letter-spacing:-.3px;text-transform:capitalize}
+#cpHead small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+#cpClose{margin-left:auto;background:#f5f5f7;border:0;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;color:#1d1d1f;flex:none}
+#cpActs{display:flex;gap:8px;padding:10px 16px;border-bottom:1px solid #e5e5ea}
+#cpActs a,#cpActs button{flex:1;text-align:center;font:500 12.5px Inter,system-ui,sans-serif;padding:8px;border-radius:980px;border:1px solid #d2d2d7;background:#fff;color:#1d1d1f;text-decoration:none;cursor:pointer}
+#cpActs a:hover,#cpActs button:hover{border-color:var(--blue-hi);color:var(--blue-hi)}
+#cpFrame{flex:1 1 0;min-height:0;border:0;width:100%;background:#fff}
+/* shorter screens: trim secondary text so everything still fits */
+@media(max-height:960px){
+  .evcol .eyebrow{display:none}
+  #figSub,.figcap{display:none}
+  .evhead{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px}
+  .scale{display:none}
+  .snd{margin-bottom:3px}
+  #dial{width:80px;height:80px}.where{grid-template-columns:80px 1fr;padding-top:6px}
+  .where p{font-size:12px}
+  #listenCard .sub{display:none}
+  #wave{display:none!important}
+  #micCard h3{font-size:15px}
+  .card{padding:14px 16px}
+  .evcol,.side{gap:12px}
+}
+/* small screens: fall back to scrolling */
+@media(max-width:1100px),(max-height:640px){html,body{height:auto;overflow:auto}.wrap{display:block}.grid,.grid.chat-open{grid-template-columns:1fr}.stage{height:560px}.head h1{white-space:normal}#fvCard,#whyCard,#sndCard{min-height:320px}}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="brand"><div class="mark"></div>Gauge</div>
+  <div class="navr"><span class="pill"><i></i>Running on HP ZGX Nano</span><span class="pill">Offline · raw audio never leaves the device</span></div>
+</nav>
+
+<div class="wrap">
+  <div class="head">
+    <h1>Hear the fault. <span>See where it is. Fix it.</span></h1>
+    <div class="steps" id="steps">
+      <div class="st"><i></i><span><b>Detect</b> · AST</span></div>
+      <div class="st"><i></i><span><b>Identify</b> · fine-tuned Omni</span></div>
+      <div class="st"><i></i><span><b>Diagnose</b> · Qwen2.5-Omni</span></div>
+      <div class="st"><i></i><span><b>Visualise</b> · Qwen-Image + Hunyuan3D</span></div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid">
+    <aside id="chatPanel" aria-label="Repair guide">
+      <div id="cpHead"><span class="dot" id="cpDot"></span><div><div class="k">Repair guide</div><b id="cpName">Part</b><small id="cpSub"></small></div><button id="cpClose" title="Close">×</button></div>
+      <div id="cpActs"><button id="cpCmp">Compare + print part</button><a id="cpFull" target="_blank">Open full chat</a></div>
+      <iframe id="cpFrame" title="Repair assistant"></iframe>
+    </aside>
+    <div class="stage" id="stage">
+      <div class="stage-empty" id="stageEmpty">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M32 6 56 19v26L32 58 8 45V19z"/><path d="M8 19l24 13 24-13M32 32v26"/></svg>
+        <b id="seT">No model yet</b>
+        <span id="seS">Upload a machine recording and press Analyze. Gauge builds the 3D view of the machine it hears.</span>
+      </div>
+      <iframe id="viewer" title="3D inspection view"></iframe>
+      <div class="stage-top">
+        <div class="stage-title"><div class="k" id="sK">Digital twin</div><div class="n" id="sN">Waiting for a recording</div><div class="u" id="sU">Upload a machine sound to begin</div></div>
+        <span class="chip idle" id="sChip">● Idle</span>
+      </div>
+      <div class="stage-tools"><button class="gbtn" id="fs">Expand</button></div>
+    </div>
+
+    <div class="side">
+      <div class="card" id="listenCard">
+        <h3>Listen</h3>
+        <p class="sub">A 10-second, 8-microphone recording from the machine.</p>
+        <div id="drop"><b>Drop a recording here</b><small>or click to choose · .wav, 8-channel, 16 kHz</small></div>
+        <input type="file" id="file" accept=".wav" hidden>
+        <div id="fname"></div>
+        <canvas id="wave"></canvas>
+        <audio id="player" controls></audio>
+        <button class="btn primary full" id="go" disabled>Analyze</button>
+        <div class="err" id="err"></div>
+      </div>
+      <div class="card" id="vCard">
+        <h3>Verdict</h3>
+        <div id="verdict"><div class="empty">No recording analyzed yet.</div></div>
+      </div>
+      <div class="card" id="micCard">
+        <h3>8-mic array · source direction</h3>
+        <div id="micBody"><div id="micWrap"><canvas id="mic" style="display:none"></canvas></div><div class="mictxt" id="micTxt"><span class="empty" style="display:block;text-align:left;padding:0">The microphone map appears after analysis.</span></div></div>
+      </div>
+      <div class="card" id="rxCard">
+        <div class="cardhead"><h3>Live receiver</h3><span class="rxdot" id="rxDot"><i></i><span id="rxState">OFF</span></span></div>
+        <div class="rxrow"><canvas id="rxWave"></canvas><button class="btn ghost" id="rxBtn">Listen</button><button class="btn primary" id="rxRec" disabled>Record 10 s</button></div>
+        <div class="rxfoot"><label class="rxauto"><input type="checkbox" id="rxAuto"> Auto-monitor every 10 s</label><span id="rxCount"></span></div>
+        <div class="rxmsg" id="rxMsg">Gauge hears the machine in real time through this computer's microphone.</div>
+      </div>
+    </div>
+
+    <div class="evcol">
+    <div class="card" id="fvCard">
+      <div class="eyebrow">Fault view</div>
+      <h3>Where the fault sits</h3>
+      <p class="sub" id="figSub">A cutaway of the diagnosed part.</p>
+      <div id="figWrap"><img id="fig" alt="Fault location illustration"><div class="empty" id="figEmpty">Appears when a fault is found.</div></div>
+      <div class="figcap" id="figCap"></div>
+    </div>
+
+    <div class="card" id="whyCard">
+      <div class="eyebrow">Acoustic evidence</div>
+      <h3 class="darkt">Spectrogram</h3>
+      <div id="evHead" class="evhead" style="display:none"></div><div class="empty" id="specEmpty">The spectrogram appears after analysis.</div>
+      <div id="specWrap"><canvas id="spec" title="Time runs left to right, pitch runs bottom (low) to top (high), brighter means louder. Rows 1-3 are the pitches the AI listened to most."></canvas></div>
+      <div id="specX" style="display:none">
+        <div class="scale"><span>quiet</span><i></i><span>loud</span></div>
+        <div class="howto"><b>How to read it:</b> time runs left to right, pitch runs bottom (low) to top (high), brighter means louder. Rows marked <b>1–3</b> are the pitches the AI listened to most.</div>
+        <div id="bandlist" class="bandlist"></div>
+      </div>
+    </div>
+
+    <div class="card" id="sndCard">
+      <div class="eyebrow">Evidence</div>
+      <h3>Spectral energy by sound type</h3>
+      <div id="sounds"><div class="empty">Sound types appear after analysis.</div></div>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"><div class="ti">!</div><div><b id="tt"></b><span id="ts"></span></div><button class="btn primary" id="tb" style="font-size:13px;padding:8px 14px">Open repair guide</button><button class="x" id="tx" title="Dismiss">×</button></div>
+<div id="tip"></div>
+<div id="lightbox"><img id="lbImg" alt=""></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const INK = '#1d1d1f', MUTED = '#6e6e73', GRID = '#e5e5ea', OK = '#248a3d', BAD = '#d70015', BLUE = '#0071e3';
+const NAMES = {fan: 'Industrial fan', pump: 'Water pump', valve: 'Solenoid valve'};
+const GROUPS = [
+  {key:'rumble', icon:'〰', name:'Low rumble',    hint:'often loose mounts, imbalance, heavy vibration', lo:0,    hi:300},
+  {key:'hum',    icon:'◎', name:'Hum',           hint:'often rotation problems, a wobbling rotor',       lo:300,  hi:1000},
+  {key:'whine',  icon:'⌁', name:'Whine / grind', hint:'often worn bearings, rubbing parts, motor faults', lo:1000, hi:4000},
+  {key:'hiss',   icon:'≋', name:'Hiss / rattle', hint:'often leaks, air or fluid flow, loose debris',    lo:4000, hi:1e9},
+];
+const DIRS = ['front','front-right','right','back-right','back','back-left','left','front-left'];
+let file = null, timers = [];
+const hist = [];
+
+function fitCanvas(c){ const r = devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight; c.width = w*r; c.height = h*r; const g = c.getContext('2d'); g.setTransform(r,0,0,r,0,0); return [g, w, h]; }
+const RAMP = [[251,251,253],[253,240,196],[253,197,102],[249,139,53],[232,71,43],[168,18,63],[67,9,77]];
+function ramp(v){ const x = v/255*(RAMP.length-1), i = Math.min(RAMP.length-2, Math.floor(x)), f = x-i, a = RAMP[i], b = RAMP[i+1]; return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f]; }
+const fmtHz = hz => hz >= 1000 ? (hz/1000).toFixed(hz >= 10000 ? 0 : 1) + ' kHz' : Math.round(hz) + ' Hz';
+const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const tip = $('tip');
+function showTip(e, html){ tip.innerHTML = html; tip.style.display = 'block'; tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; }
+function hideTip(){ tip.style.display = 'none'; }
+function setViewer(url){ const v = $('viewer'); $('stage').classList.remove('loading'); $('stageEmpty').style.display = 'none'; v.style.display = 'block'; v.onload = () => { try { const p = v.contentDocument.getElementById('panel'); if (p) p.style.display = 'none'; } catch {} }; v.src = url; }
+
+const drop = $('drop');
+drop.onclick = () => $('file').click();
+$('file').onchange = e => pick(e.target.files[0]);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('drag'); };
+drop.ondragleave = () => drop.classList.remove('drag');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('drag'); pick(e.dataTransfer.files[0]); };
+function pick(f){
+  if (!f) return;
+  file = f; lastWave = null; $('err').textContent = '';
+  $('fname').textContent = `${f.name} · ${(f.size/1e6).toFixed(1)} MB`;
+  $('player').src = URL.createObjectURL(f); $('player').style.display = 'block';
+  $('go').disabled = false; drawWave(f);
+}
+let lastWave = null;
+async function drawWave(f){
+  const c = $('wave');
+  try {
+    const buf = await new (window.AudioContext||window.webkitAudioContext)().decodeAudioData(await f.arrayBuffer());
+    c.style.display = 'block'; lastWave = {data: buf.getChannelData(0), dur: Math.round(buf.duration * 10) / 10, sr: buf.sampleRate};
+    const [g, W, H] = fitCanvas(c), d = buf.getChannelData(0), step = Math.max(1, Math.floor(d.length / W));
+    let peak = 1e-6; for (let i = 0; i < d.length; i += 50) peak = Math.max(peak, Math.abs(d[i]));
+    g.fillStyle = BLUE;
+    for (let x = 0; x < W; x += 3){ let m = 0; for (let i = 0; i < step; i += 8) m = Math.max(m, Math.abs(d[x*step+i] || 0)); const h = Math.max(2, m/peak*H*.9); g.fillRect(x, (H-h)/2, 2, h); }
+  } catch { c.style.display = 'none'; }
+}
+
+const steps = [...document.querySelectorAll('.st')];
+const setStep = (i, s) => steps[i].className = 'st ' + (s || '');
+function resetSteps(){ steps.forEach((_, i) => setStep(i)); timers.forEach(clearTimeout); timers = []; }
+
+$('go').onclick = async () => {
+  if (!file) return;
+  $('go').disabled = true; $('go').textContent = 'Listening…'; $('err').textContent = '';
+  resetSteps(); setStep(0, 'run');
+  $('viewer').style.display = 'none'; $('viewer').removeAttribute('src'); $('stageEmpty').style.display = 'flex'; $('stage').classList.add('loading');
+  $('seT').textContent = 'Listening to the machine…'; $('seS').textContent = 'Detecting the fault, identifying the unit and building its 3D model.'; closeChat();
+  timers.push(setTimeout(() => { setStep(0, 'done'); setStep(1, 'run'); }, 900));
+  timers.push(setTimeout(() => { setStep(1, 'done'); setStep(2, 'run'); }, 3500));
+  const fd = new FormData(); fd.append('file', file);
+  const t0 = performance.now();
+  try {
+    const res = await fetch('/analyze', {method: 'POST', body: fd});
+    const r = await res.json();
+    if (!res.ok || r.error) throw new Error(r.error || 'Server error');
+    timers.forEach(clearTimeout);
+    r._file = file.name; r._secs = ((performance.now() - t0) / 1000).toFixed(1);
+    show(r, true);
+    if (r.saved) rxResult(r);
+  } catch (e) { resetSteps(); $('err').textContent = e.message; $('stage').classList.remove('loading'); $('seT').textContent = 'No model yet'; $('seS').textContent = 'Analysis failed. Try another recording.'; }
+  $('go').disabled = false; $('go').textContent = 'Analyze';
+};
+
+function ringSVG(p, bad){
+  const R = 40, C = 2 * Math.PI * R, col = bad ? BAD : OK;
+  return `<svg class="ring" viewBox="0 0 96 96"><circle cx="48" cy="48" r="${R}" fill="none" stroke="${GRID}" stroke-width="9"/>
+    <circle cx="48" cy="48" r="${R}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 48 48)"/>
+    <text x="48" y="47" text-anchor="middle" font-size="19" font-weight="800" fill="${INK}" font-family="Inter,system-ui">${Math.round(p*100)}%</text>
+    <text x="48" y="62" text-anchor="middle" font-size="9.5" fill="${MUTED}" font-family="Inter,system-ui">anomaly</text></svg>`;
+}
+
+function show(r, fresh){
+  const ab = r.status === 'abnormal', d = r.diag || {}, name = NAMES[r.machine] || r.machine || 'Machine';
+  [0,1,2,3].forEach(i => setStep(i, (ab || i < 2) ? 'done' : 'skip'));
+  $('sK').textContent = ab ? 'Fault located' : 'Digital twin';
+  $('sN').textContent = name;
+  $('sU').textContent = r.asset ? `Unit ${r.asset.replace('id_', 'ID ')} · recognised by sound` : 'Unit not identified';
+  $('sChip').className = 'chip ' + (ab ? 'bad' : 'ok');
+  $('sChip').textContent = ab ? `▲ ${String(d.likely_component || 'fault').toUpperCase()} FAULT` : '● Healthy';
+  const key = r.cache_key || r.machine || 'fan';
+  setViewer((ab && r.viewer_url ? r.viewer_url : `/viewer.html?m=${key}&healthy=1`) + (r.incident ? '&incident=' + r.incident : '') + '&t=' + Date.now());
+
+  const sev = (d.severity || 'medium').toLowerCase();
+  $('verdict').innerHTML = `
+    <div class="verdict">${ringSVG(r.score || 0, ab)}
+      <div><div class="vstate ${ab ? 'bad' : 'ok'}">${ab ? 'Abnormal' : 'Normal'}</div>
+        <span class="lvl lvl-${ab ? (r.level || 'warning') : 'normal'}">${ab ? (r.level || 'warning').toUpperCase() : 'HEALTHY'}</span>
+        <div class="meta">Analyzed on-device in ${r._secs || '?'} s</div></div></div>
+    <div class="kv">
+      <div><small>Machine</small><span>${esc(name)}</span></div>
+      ${r.asset ? `<div><small>Unit</small><span>${r.asset.replace('id_', 'ID ')} <span style="display:inline;color:var(--muted)">· ${Math.round((r.asset_conf || 0) * 100)}%</span></span></div>` : ''}
+      ${ab ? `<div><small>Component</small><span style="text-transform:capitalize">${esc(d.likely_component)}</span></div>
+      <div><small>Severity</small><span><span class="sev sev-${sev}" style="display:inline-block">${sev}</span></span></div>
+      <div style="grid-column:1/-1"><small>Fault</small><span title="${esc(d.fault)}">${esc(d.fault)}</span></div>` : ''}
+    </div>
+    ${ab ? `<div class="btns"><button class="btn primary" id="vRepair">Repair guide</button>${r.chat_url ? `<a class="btn ghost" href="${r.chat_url}" target="_blank">Full chat</a>` : ''}</div>` : ''}`;
+  if ($('vRepair')) $('vRepair').onclick = openRepair;
+
+  if (ab && r.image_url) {
+    $('fig').src = r.image_url + '?t=' + Date.now(); $('fig').style.display = 'block'; $('figEmpty').style.display = 'none';
+    const info = r.image_info;
+    $('figSub').textContent = `${String(d.likely_component || 'Part').replace(/^./, c => c.toUpperCase())} on the ${name.toLowerCase()}. Click to enlarge.`;
+    $('figCap').innerHTML = info ? `From the manual: <a href="/manuals/${info.file}#page=${info.page}" target="_blank">${esc(info.title)}, p.${info.page}</a>` : 'Illustration generated on-device from the diagnosis.';
+  } else {
+    $('fig').style.display = 'none'; $('figEmpty').style.display = 'block';
+    $('figEmpty').textContent = ab ? 'No illustration available.' : 'No fault found, nothing to show.';
+    $('figSub').textContent = 'A cutaway of the diagnosed part.'; $('figCap').textContent = '';
+  }
+  drawEvidence(r);
+  hideToast(); closeChat();
+  if (ab && fresh) faultAlert(r);
+}
+
+function addHist(r){
+  hist.unshift(r);
+  $('hist').innerHTML = '';
+  hist.slice(0, 7).forEach(h => {
+    const d = document.createElement('div'); d.className = 'hrow';
+    d.innerHTML = `<span>${esc(h._file)} <small>· ${NAMES[h.machine] || h.machine || ''}${h.asset ? ' ' + h.asset.replace('id_', 'ID ') : ''}</small></span><span class="tag ${h.status === 'abnormal' ? 'bad' : 'ok'}">${h.status === 'abnormal' ? '▲ abnormal' : '● normal'}</span>`;
+    d.onclick = () => show(h, false);
+    $('hist').appendChild(d);
+  });
+}
+
+// ---------- real spectrogram of the uploaded audio: STFT -> mel-spaced rows -> dB ----------
+const SPEC_STOPS = [[0, '#fbfbfd'], [0.18, '#fdf0c4'], [0.38, '#fdc566'], [0.56, '#f98b35'], [0.72, '#e8472b'], [0.87, '#a8123f'], [1, '#43094d']];
+const SPEC_LUT = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 1; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 256, 0);
+  SPEC_STOPS.forEach(([t, col]) => gr.addColorStop(t, col)); g.fillStyle = gr; g.fillRect(0, 0, 256, 1); return g.getImageData(0, 0, 256, 1).data; })();
+function fft(re, im){ const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+  for (let len = 2; len <= n; len <<= 1) { const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);
+    for (let i = 0; i < n; i += len) { let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) { const ur = re[i + k], ui = im[i + k], xr = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci, xi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+        re[i + k] = ur + xr; im[i + k] = ui + xi; re[i + k + len / 2] = ur - xr; im[i + k + len / 2] = ui - xi; const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } } } }
+function realSpec(wv){
+  if (wv.spec) return wv.spec;
+  const d = wv.data, sr = wv.sr || 16000, N = sr > 24000 ? 2048 : 1024, FR = 640, ROWS = 220, hop = Math.max(1, Math.floor((d.length - N) / FR));
+  const win = Float32Array.from({length: N}, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1)));
+  const mel = f => 1127 * Math.log(1 + f / 700), imel = m => 700 * (Math.exp(m / 1127) - 1), M0 = mel(20), M1 = mel(Math.min(8000, sr / 2));
+  const rowBins = Array.from({length: ROWS}, (_, r) => { const f0 = imel(M0 + (M1 - M0) * r / ROWS), f1 = imel(M0 + (M1 - M0) * (r + 1) / ROWS);
+    const b0 = Math.max(1, Math.floor(f0 / sr * N)), b1 = Math.max(b0, Math.ceil(f1 / sr * N)); return [b0, Math.min(b1, N / 2 - 1)]; });
+  const db = new Float32Array(FR * ROWS), re = new Float32Array(N), im = new Float32Array(N);
+  for (let t = 0; t < FR; t++) { const o = t * hop;
+    for (let i = 0; i < N; i++) { re[i] = (d[o + i] || 0) * win[i]; im[i] = 0; } fft(re, im);
+    for (let r = 0; r < ROWS; r++) { const [b0, b1] = rowBins[r]; let p = 0; for (let b = b0; b <= b1; b++) p += re[b] * re[b] + im[b] * im[b]; p /= (b1 - b0 + 1);
+      db[t * ROWS + r] = 10 * Math.log10(p + 1e-12); } }
+  const sorted = Float32Array.from(db).sort(), top = sorted[Math.floor(sorted.length * 0.998)], floor = top - 80;
+  const c = document.createElement('canvas'); c.width = FR; c.height = ROWS; const g = c.getContext('2d'), img = g.createImageData(FR, ROWS);
+  for (let t = 0; t < FR; t++) for (let r = 0; r < ROWS; r++) { const v = Math.max(0, Math.min(1, (db[t * ROWS + r] - floor) / 80)), q = Math.round(Math.pow(v, 2.8) * 255) * 4, px = ((ROWS - 1 - r) * FR + t) * 4;
+    img.data[px] = SPEC_LUT[q]; img.data[px + 1] = SPEC_LUT[q + 1]; img.data[px + 2] = SPEC_LUT[q + 2]; img.data[px + 3] = 255; }
+  g.putImageData(img, 0, 0); wv.spec = c; return c;
+}
+
+function drawEvidence(r){
+  const ev = r.evidence;
+  if (!ev || !ev.spec) return;
+  const machine = (NAMES[r.machine] || r.machine || 'machine').toLowerCase(), ab = r.status === 'abnormal', n = ev.bands.length;
+  const groupOf = bd => { const c = Math.sqrt(bd.lo * bd.hi); return GROUPS.find(g => c >= g.lo && c < g.hi); };
+  const groups = GROUPS.map(g => ({...g, w: 0, k: 0}));
+  ev.bands.forEach(bd => { const g = groups.find(x => x.key === groupOf(bd).key); g.w += bd.w; g.k++; });
+  const used = groups.filter(g => g.k), top = used.reduce((a, b) => b.w > a.w ? b : a), mx = Math.max(...used.map(g => g.w));
+  $('sounds').innerHTML = used.map(g => `<div class="snd ${g === top ? 'top' : ''}" title="${g.hint}"><span class="ic">${g.icon}</span>
+      <span class="nm"><b>${g.name}</b><small>${g.hint}</small></span><span class="pct">${Math.round(g.w * 100)}%</span>
+      <span></span><span class="bar"><i style="width:${g.w / mx * 100}%"></i></span></div>`).join('');
+
+  const {w, h, b64} = ev.spec, raw = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
+  const loud = Array.from({length: w}, (_, x) => { let s = 0; for (let y = 0; y < h; y++) s += raw[y * w + x]; return s / h; });
+  const sm = loud.map((_, i) => { let s = 0, c = 0; for (let j = i - 4; j <= i + 4; j++) if (loud[j] !== undefined) { s += loud[j]; c++; } return s / c; });
+  const lmin = Math.min(...sm), lmax = Math.max(...sm), peak = sm.indexOf(lmax), peakS = (peak / w * 10).toFixed(1), steady = (lmax - lmin) < 18;
+  const mics = ev.mics, best = mics.indexOf(Math.max(...mics));
+  const b0 = ev.top.map(i => ev.bands[i]).find(bd => groupOf(bd).key === top.key) || ev.bands[ev.top[0]];
+  $('evHead').innerHTML = ab
+    ? `This ${machine} sounds unusual. The AI focused on its <b>${top.name.toLowerCase()}</b> (${fmtHz(b0.lo)}–${fmtHz(b0.hi)})${steady ? ', and it is <b>constant</b> through the clip' : `, loudest around <b>${peakS} s</b>`}.`
+    : `This ${machine} sounds <b>healthy</b>. Nothing in its sound stood out.`;
+
+  $('specWrap').style.display = 'block'; $('specEmpty').style.display = 'none';
+  const off = document.createElement('canvas'); off.width = w; off.height = h;
+  const og = off.getContext('2d'), img = og.createImageData(w, h);
+  for (let i = 0; i < raw.length; i++) { const [R2, G2, B2] = ramp(raw[i]); img.data[i*4] = R2; img.data[i*4+1] = G2; img.data[i*4+2] = B2; img.data[i*4+3] = 255; }
+  og.putImageData(img, 0, 0);
+  const sc = $('spec'), [g, W, H] = fitCanvas(sc), L = 46, Rm = 44, T = 6, AX = 30, WV = Math.max(34, Math.round(H * 0.22)), GAP = 6;
+  const PW = W - L - Rm, PH = H - T - AX - WV - GAP, WY = T + PH + GAP, AXC = MUTED, DUR = (lastWave && lastWave.dur) || 10;
+  g.clearRect(0, 0, W, H);
+  const real = lastWave && lastWave.data ? realSpec(lastWave) : null;
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.drawImage(real || off, L, T, PW, PH);
+  g.strokeStyle = 'rgba(0,0,0,.1)'; g.lineWidth = 1; g.strokeRect(L + .5, T + .5, PW - 1, PH - 1);
+  // dB colour bar
+  const cb = g.createLinearGradient(0, T + PH, 0, T); SPEC_STOPS.forEach(([t, c]) => cb.addColorStop(t, c));
+  g.fillStyle = cb; g.fillRect(L + PW + 10, T, 8, PH); g.strokeStyle = 'rgba(0,0,0,.18)'; g.strokeRect(L + PW + 10.5, T + .5, 7, PH - 1);
+  g.fillStyle = MUTED; g.font = '9.5px Inter,system-ui'; g.textAlign = 'left';
+  g.fillText('0 dB', L + PW + 21, T + 8); g.fillText('-40', L + PW + 21, T + PH / 2 + 3); g.fillText('-80', L + PW + 21, T + PH - 1);
+  const mel = f => 1127 * Math.log(1 + f / 700), M0 = mel(20), M1 = mel(8000);
+  const yHz = f => T + PH - (mel(f) - M0) / (M1 - M0) * PH, yMel = bin => T + PH - bin / 128 * PH;
+  // y axis
+  g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 1; g.beginPath(); g.moveTo(L - 0.5, T); g.lineTo(L - 0.5, T + PH); g.stroke();
+  g.font = '10px Inter,system-ui'; g.textAlign = 'right';
+  [[100, '100'], [500, '500'], [1000, '1k'], [2000, '2k'], [4000, '4k'], [8000, '8k']].forEach(([f, l]) => {
+    const y = Math.min(T + PH - 2, Math.max(T + 6, yHz(f))); g.fillStyle = AXC; g.fillText(l, L - 6, y + 3); g.fillRect(L - 4, yHz(f), 4, 1); });
+  g.save(); g.translate(11, T + PH / 2); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillStyle = AXC; g.font = '10.5px Inter,system-ui'; g.fillText('Frequency (Hz)', 0, 0); g.restore();
+  // attention bands 1-3
+  ev.top.slice().reverse().forEach(bi => { const k = ev.top.indexOf(bi), bd = ev.bands[bi], y1 = Math.max(T, yHz(Math.min(8000, bd.hi))), y0 = Math.min(T + PH, yHz(Math.max(20, bd.lo))), cy = (y0 + y1) / 2;
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(L, y1, PW, y0 - y1);
+    g.strokeStyle = k === 0 ? '#0071e3' : 'rgba(0,113,227,.55)'; g.lineWidth = k === 0 ? 1.6 : 1.1; g.strokeRect(L + 0.5, y1 + 0.5, PW - 1, y0 - y1 - 1);
+    g.beginPath(); g.arc(L + 12, cy, 7.5, 0, Math.PI * 2); g.fillStyle = k === 0 ? '#0071e3' : '#5a8fd6'; g.fill();
+    g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = '#fff'; g.font = '800 10px Inter,system-ui'; g.textAlign = 'center'; g.fillText(k + 1, L + 12, cy + 3.5); });
+  // waveform under the spectrogram
+  g.fillStyle = 'rgba(66,66,69,.55)';
+  if (lastWave && lastWave.data) { const dd = lastWave.data, step = Math.max(1, Math.floor(dd.length / PW)); let pk = 1e-6; for (let i = 0; i < dd.length; i += 64) pk = Math.max(pk, Math.abs(dd[i]));
+    for (let x = 0; x < PW; x++) { let mn = 0, mx = 0; for (let i = x * step; i < (x + 1) * step && i < dd.length; i += 4) { const v = dd[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+      const a = WY + WV / 2 - mx / pk * WV * 0.48, b = WY + WV / 2 - mn / pk * WV * 0.48; g.fillRect(L + x, a, 1, Math.max(1, b - a)); } }
+  else { const lm = Math.max(...sm), ln = Math.min(...sm); for (let x = 0; x < PW; x++) { const v = (sm[Math.floor(x / PW * sm.length)] - ln) / (lm - ln + 1e-6); const hh = 2 + v * WV * 0.9; g.fillRect(L + x, WY + (WV - hh) / 2, 1, hh); } }
+  // time axis
+  const AY = WY + WV + 4; g.strokeStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.moveTo(L, AY); g.lineTo(L + PW, AY); g.stroke();
+  g.fillStyle = AXC; g.font = '10px Inter,system-ui'; g.textAlign = 'center';
+  const tk = DUR > 6 ? 2 : 1; for (let t = 0; t <= DUR + 1e-6; t += tk) { const x = L + t / DUR * PW; g.fillRect(x, AY, 1, 4); g.fillText(t + ' s', Math.min(W - 12, Math.max(L + 8, x)), AY + 14); }
+  g.fillText('Time', L + PW / 2, AY + 25);
+  sc.onmousemove = e => { const rc = sc.getBoundingClientRect(), px = e.clientX - rc.left, py = e.clientY - rc.top;
+    if (px < L || px > L + PW || py < T || py > T + PH) return hideTip();
+    const bin = (T + PH - py) / PH * 128, t = (px - L) / PW * DUR, bi = Math.max(0, Math.min(n - 1, Math.floor(bin / 10))), bd = ev.bands[bi], rk = ev.top.indexOf(bi);
+    showTip(e, `<b>${fmtHz(bd.lo)}–${fmtHz(bd.hi)}</b> at ${t.toFixed(1)} s<br><span style="color:${MUTED}">${groupOf(bd).name} · AST attention ${(bd.w * 100).toFixed(1)}%${rk >= 0 ? ` · focus band #${rk + 1}` : ''}</span>`); };
+  sc.onmouseleave = hideTip;
+  $('bandlist').innerHTML = ev.top.map((bi, k) => { const bd = ev.bands[bi];
+    return `<div><span class="n ${k ? 's' : ''}">${k + 1}</span><span><b>${fmtHz(bd.lo)}–${fmtHz(bd.hi)}</b> <span style="color:var(--muted)">· ${groupOf(bd).name.toLowerCase()} · ${(bd.w * n).toFixed(1)}× average attention</span></span></div>`; }).join('');
+
+  drawMic(mics, best, machine);
+}
+
+
+function drawMic(mics, best, machine){
+  const c = $('mic'); c.style.display = 'block';
+  const [g, W, H] = fitCanvas(c), cx = W / 2, cy = H / 2 + 4, R = Math.max(26, Math.min(W, H) / 2 - 24);
+  const mx = Math.max(...mics), mn = Math.min(...mics), q = mics.map(v => (v - mn) / (mx - mn + 1e-9));
+  const ang = i => -Math.PI / 2 + i * Math.PI / 4;
+  // rings + spokes
+  g.strokeStyle = GRID; g.lineWidth = 1;
+  [1, .66, .33].forEach(k => { g.beginPath(); g.arc(cx, cy, R * k, 0, Math.PI * 2); g.stroke(); });
+  for (let i = 0; i < 8; i++) { g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + R * Math.cos(ang(i)), cy + R * Math.sin(ang(i))); g.stroke(); }
+  // energy blob toward the weighted source direction
+  let vx = 0, vy = 0; q.forEach((v, i) => { vx += v * Math.cos(ang(i)); vy += v * Math.sin(ang(i)); });
+  const mag = Math.hypot(vx, vy) / (q.reduce((a, b) => a + b, 0) + 1e-9), bx = cx + vx / (Math.hypot(vx, vy) + 1e-9) * R * (0.25 + 0.45 * mag), by = cy + vy / (Math.hypot(vx, vy) + 1e-9) * R * (0.25 + 0.45 * mag);
+  const gr = g.createRadialGradient(bx, by, 0, bx, by, R * 0.7);
+  gr.addColorStop(0, 'rgba(0,113,227,.55)'); gr.addColorStop(.5, 'rgba(0,113,227,.18)'); gr.addColorStop(1, 'rgba(0,113,227,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+  // highlight arc at the loudest mic
+  g.strokeStyle = BLUE; g.lineWidth = 4; g.lineCap = 'round';
+  g.beginPath(); g.arc(cx, cy, R, ang(best) - 0.38, ang(best) + 0.38); g.stroke(); g.lineCap = 'butt';
+  // machine in the middle
+  g.fillStyle = '#fff'; g.strokeStyle = '#d2d2d7'; g.lineWidth = 1;
+  g.beginPath(); g.roundRect ? g.roundRect(cx - 24, cy - 12, 48, 24, 7) : g.rect(cx - 24, cy - 12, 48, 24); g.fill(); g.stroke();
+  g.fillStyle = MUTED; g.font = '600 10px Inter,system-ui'; g.textAlign = 'center'; g.fillText(machine.split(' ').pop().slice(0, 6), cx, cy + 3.5);
+  g.fillText('▲ FRONT', cx, Math.max(10, cy - R - 12));
+  // numbered mics
+  mics.forEach((v, i) => { const x = cx + R * Math.cos(ang(i)), y = cy + R * Math.sin(ang(i)), on = i === best;
+    g.beginPath(); g.arc(x, y, on ? 12 : 10, 0, Math.PI * 2); g.fillStyle = on ? BLUE : '#fff'; g.fill();
+    g.strokeStyle = on ? BLUE : `rgba(0,113,227,${0.25 + q[i] * 0.6})`; g.lineWidth = 2; g.stroke();
+    g.fillStyle = on ? '#fff' : INK; g.font = '700 10.5px Inter,system-ui'; g.fillText(i + 1, x, y + 3.8); });
+  // callout
+  
+  $('micTxt').innerHTML = `<b>Start on the ${DIRS[best]} side</b>Mic ${best + 1} carries ${(mics[best] * 100).toFixed(0)}% of the array attention, ${(mics[best] * 8).toFixed(1)}× the per-mic mean.`;
+  c.onmousemove = e => { const rc = c.getBoundingClientRect(), x = e.clientX - rc.left - cx, y = e.clientY - rc.top - cy;
+    const i = ((Math.round((Math.atan2(y, x) + Math.PI / 2) / (Math.PI / 4)) % 8) + 8) % 8;
+    showTip(e, `<b>Mic ${i + 1} · ${DIRS[i]}</b><br><span style="color:${MUTED}">attention ${(mics[i] * 100).toFixed(1)}%</span>`); };
+  c.onmouseleave = hideTip;
+}
+
+// ---------- live receiver: microphone -> live waveform -> 10 s clip -> /analyze ----------
+let rx = null;
+function rxMsg(t){ $('rxMsg').textContent = t; }
+async function rxStart(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { rxMsg('Microphone needs a secure page. Open http://127.0.0.1:8000 on the Nano (or use https).'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}});
+    const ctx = new (window.AudioContext || window.webkitAudioContext)(), src = ctx.createMediaStreamSource(stream), an = ctx.createAnalyser();
+    an.fftSize = 2048; src.connect(an);
+    rx = {stream, ctx, an, buf: new Float32Array(an.fftSize), hist: []};
+    $('rxBtn').textContent = 'Stop'; $('rxRec').disabled = false; $('rxDot').classList.add('on'); $('rxState').textContent = 'LIVE';
+    rxMsg('Listening. Hold the mic near the machine, then record a 10-second clip.');
+    (function loop(){ if (!rx) return; requestAnimationFrame(loop);
+      rx.an.getFloatTimeDomainData(rx.buf); let pk = 0; for (const v of rx.buf) pk = Math.max(pk, Math.abs(v));
+      rx.hist.push(pk); const c = $('rxWave'), [g, W, H] = fitCanvas(c); if (rx.hist.length > W / 3) rx.hist.shift();
+      g.fillStyle = rx.rec ? BAD : BLUE; rx.hist.forEach((v, i) => { const h = Math.max(2, Math.min(1, v * 2.2) * (H - 6)); g.fillRect(W - (rx.hist.length - i) * 3, (H - h) / 2, 2, h); }); })();
+  } catch (e) { rxMsg('Microphone blocked: ' + e.message); }
+}
+function rxStop(){ $('rxAuto').checked = false; if (!rx) return; rx.stream.getTracks().forEach(t => t.stop()); rx.ctx.close(); rx = null;
+  $('rxBtn').textContent = 'Listen'; $('rxRec').disabled = true; $('rxDot').classList.remove('on'); $('rxState').textContent = 'OFF'; rxMsg('Receiver off.'); }
+$('rxBtn').onclick = () => rx ? rxStop() : rxStart();
+function toWav8(mono, sr){ // 8 identical channels, 16-bit PCM: the format the Gauge server expects
+  const ch = 8, n = mono.length, b = new ArrayBuffer(44 + n * ch * 2), v = new DataView(b), w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * ch * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * ch * 2, true); v.setUint16(32, ch * 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * ch * 2, true);
+  let o = 44; for (let i = 0; i < n; i++) { const s = Math.max(-1, Math.min(1, mono[i])) * 32767; for (let c = 0; c < ch; c++) { v.setInt16(o, s, true); o += 2; } }
+  return new Blob([b], {type: 'audio/wav'});
+}
+function rxResult(r){
+  const ab = r.status === 'abnormal', nm = r.saved.split('/').pop();
+  $('rxMsg').innerHTML = `<span class="${ab ? 'bad' : 'ok'}">${ab ? '▲ Abnormal' : '● Normal'} ${Math.round((r.score || 0) * 100)}%</span> · stored <a href="${r.saved}" target="_blank">${nm}</a>`;
+  if (r.saved_count) $('rxCount').textContent = `${r.saved_count} clip${r.saved_count > 1 ? 's' : ''} stored on the Nano`;
+}
+const idle = () => new Promise(res => { const t = setInterval(() => { if (!$('go').disabled) { clearInterval(t); res(); } }, 200); });
+async function rxCapture(){
+  if (!rx || rx.rec) return;
+  const mr = new MediaRecorder(rx.stream), parts = []; rx.rec = true; $('rxRec').disabled = true;
+  mr.ondataavailable = e => parts.push(e.data); mr.start();
+  for (let t = 10; t > 0 && rx; t--) { rxMsg(`Recording… ${t} s`); await new Promise(r => setTimeout(r, 1000)); }
+  await new Promise(r => { mr.onstop = r; mr.stop(); });
+  if (!rx) return;
+  rx.rec = false; rxMsg('Converting to 16 kHz and sending to Gauge…');
+  try {
+    const dec = await rx.ctx.decodeAudioData(await new Blob(parts).arrayBuffer());
+    const off = new OfflineAudioContext(1, 16000 * 10, 16000), sN = off.createBufferSource(); sN.buffer = dec; sN.connect(off.destination); sN.start();
+    const mono = (await off.startRendering()).getChannelData(0);
+    const f = new File([toWav8(mono, 16000)], `live_${new Date().toTimeString().slice(0, 8).replace(/:/g, '')}.wav`, {type: 'audio/wav'});
+    pick(f); await new Promise(r => setTimeout(r, 300)); $('go').click();
+    await new Promise(r => setTimeout(r, 400)); await idle();
+  } catch (e) { rxMsg('Could not process the recording: ' + e.message); }
+  if (rx) $('rxRec').disabled = !!$('rxAuto').checked;
+}
+async function rxLoop(){ while (rx && $('rxAuto').checked) { await rxCapture(); await new Promise(r => setTimeout(r, 1500)); } if (rx) $('rxRec').disabled = false; }
+$('rxRec').onclick = rxCapture;
+$('rxAuto').onchange = () => { if ($('rxAuto').checked) { if (!rx) rxStart().then(() => rx && rxLoop()); else rxLoop(); } };
+
+function drawTrend(r){
+  const hs = r.history || [];
+  if (!hs.length) return;
+  $('trend').style.display = 'block'; $('trendEmpty').style.display = 'none';
+  $('trendM').textContent = '· ' + (NAMES[r.machine] || r.machine || '') + (r.asset ? ' ' + r.asset.replace('id_', 'ID ') : '');
+  const c = $('trend'), [g, W, H] = fitCanvas(c), padL = 42, padR = 12, padT = 12, padB = 22;
+  const X = i => padL + (hs.length === 1 ? (W - padL - padR) / 2 : i * (W - padL - padR) / (hs.length - 1)), Y = v => padT + (1 - v) * (H - padT - padB);
+  g.font = '11px Inter,system-ui'; g.textAlign = 'right';
+  [0, 0.5, 1].forEach(v => { g.fillStyle = MUTED; g.fillText(Math.round(v * 100) + '%', padL - 7, Y(v) + 4); g.strokeStyle = GRID; g.lineWidth = 1; g.beginPath(); g.moveTo(padL, Y(v)); g.lineTo(W - padR, Y(v)); g.stroke(); });
+  g.setLineDash([5, 4]); g.strokeStyle = '#aeaeb2'; g.beginPath(); g.moveTo(padL, Y(0.5)); g.lineTo(W - padR, Y(0.5)); g.stroke(); g.setLineDash([]);
+  g.textAlign = 'left'; g.fillStyle = MUTED; g.fillText('alert threshold', padL + 6, Y(0.5) - 6);
+  g.strokeStyle = INK; g.lineWidth = 2; g.lineJoin = 'round'; g.beginPath(); hs.forEach((h, i) => i ? g.lineTo(X(i), Y(h.score)) : g.moveTo(X(i), Y(h.score))); g.stroke();
+  hs.forEach((h, i) => { const x = X(i), y = Y(h.score); g.beginPath();
+    if (h.status === 'abnormal') { g.moveTo(x, y - 6.5); g.lineTo(x + 6, y + 4.5); g.lineTo(x - 6, y + 4.5); g.closePath(); g.fillStyle = BAD; }
+    else { g.arc(x, y, 5, 0, Math.PI * 2); g.fillStyle = OK; }
+    g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); });
+  g.fillStyle = MUTED; g.textAlign = 'left'; g.fillText('older', padL, H - 4); g.textAlign = 'right'; g.fillText('latest', W - padR, H - 4);
+  const ab = hs.filter(h => h.status === 'abnormal').length, l3 = hs.slice(-3).map(h => h.score), rising = l3.length === 3 && l3[2] > l3[1] && l3[1] > l3[0];
+  $('trendTxt').textContent = `${ab} of ${hs.length} recent recordings abnormal` + (rising ? ' · anomaly rising, schedule an inspection' : '');
+  c.onmousemove = e => { const rc = c.getBoundingClientRect(), mx = e.clientX - rc.left; let bi = 0, bd = 1e9;
+    hs.forEach((h, i) => { const dd = Math.abs(X(i) - mx); if (dd < bd) { bd = dd; bi = i; } });
+    const h = hs[bi]; showTip(e, `<b style="color:${h.status === 'abnormal' ? BAD : OK}">${h.status === 'abnormal' ? '▲ abnormal' : '● normal'}</b> · ${Math.round(h.score * 100)}%<br><span style="color:${MUTED}">${esc(h.file)} · ${new Date(h.t * 1000).toLocaleTimeString()}</span>`); };
+  c.onmouseleave = hideTip;
+}
+
+function beep(){ try { const a = new (window.AudioContext || window.webkitAudioContext)(); [0, 0.22].forEach((t, i) => { const o = a.createOscillator(), gn = a.createGain(); o.frequency.value = i ? 660 : 880; o.connect(gn); gn.connect(a.destination); gn.gain.setValueAtTime(0.16, a.currentTime + t); gn.gain.exponentialRampToValueAtTime(0.001, a.currentTime + t + 0.18); o.start(a.currentTime + t); o.stop(a.currentTime + t + 0.2); }); } catch {} }
+function faultAlert(r){
+  const d = r.diag || {};
+  $('tt').textContent = `Fault detected · ${NAMES[r.machine] || r.machine}${r.asset ? ' ' + r.asset.replace('id_', 'ID ') : ''}`;
+  $('ts').textContent = `${d.likely_component || 'component'} · ${d.fault || 'anomaly'} · ${(r.level || 'warning')}`;
+  clearTimeout(window._tt); $('toast').className = 'show' + (r.level ? ' lvl-' + r.level : ''); beep();
+  window._tt = setTimeout(hideToast, 15000);
+}
+function hideToast(){ clearTimeout(window._tt); $('toast').className = ''; }
+function openChat(o){
+  hideToast();
+  $('cpName').textContent = o.name || 'Part'; $('cpSub').textContent = o.sub || '';
+  $('cpDot').className = 'dot' + (o.fault ? '' : ' ok');
+  if ($('cpFrame').dataset.src !== o.url) { $('cpFrame').src = o.url; $('cpFrame').dataset.src = o.url; }
+  $('cpFull').href = o.url.replace('embed=1&', '');
+  $('cpCmp').style.display = o.compare ? 'block' : 'none';
+  $('cpCmp').onclick = () => { setViewer(o.compare + '&t=' + Date.now()); closeChat(); $('stage').scrollIntoView({behavior: 'smooth', block: 'center'}); };
+  $('grid').classList.add('chat-open');
+}
+function closeChat(){ $('grid').classList.remove('chat-open'); }
+$('cpClose').onclick = closeChat;
+addEventListener('message', e => { if (e.data && e.data.type === 'open-chat') openChat(e.data); });
+function openRepair(){ hideToast(); $('viewer').contentWindow.postMessage('inspect-fault', '*'); }
+$('tb').onclick = openRepair;
+$('tx').onclick = hideToast;
+$('fs').onclick = () => { $('stage').classList.toggle('full'); $('fs').textContent = $('stage').classList.contains('full') ? 'Close' : 'Expand'; };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeChat(); $('stage').classList.remove('full'); $('fs').textContent = 'Expand'; $('lightbox').style.display = 'none'; } });
+$('figWrap').onclick = () => { if ($('fig').style.display === 'block') { $('lbImg').src = $('fig').src; $('lightbox').style.display = 'flex'; } };
+$('lightbox').onclick = () => $('lightbox').style.display = 'none';
+</script>
+</body>
+</html>

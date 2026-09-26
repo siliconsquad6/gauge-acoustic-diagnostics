@@ -1,0 +1,14 @@
+{
+  "machine": "fan",
+  "likely_component": "impeller",
+  "fault": "imbalance",
+  "severity": "medium",
+  "sound_evidence": "vibration",
+  "defect_xyz": [
+    0.4445021708615529,
+    0.028814369122867185,
+    0.4162267492315167
+  ],
+  "defect_radius": 0.12,
+  "unit": "id_00"
+}

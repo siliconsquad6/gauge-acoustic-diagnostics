@@ -1,0 +1,14 @@
+{
+  "machine": "pump",
+  "likely_component": "motor",
+  "fault": "irregular motor hum",
+  "severity": "medium",
+  "sound_evidence": "whirring and gurgling",
+  "defect_xyz": [
+    0.09793262976523633,
+    -0.050870211699413886,
+    0.6853676052775317
+  ],
+  "defect_radius": 0.12,
+  "unit": "id_00"
+}

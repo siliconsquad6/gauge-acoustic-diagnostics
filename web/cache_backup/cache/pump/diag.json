@@ -1,0 +1,13 @@
+{
+  "machine": "pump",
+  "likely_component": "valve",
+  "fault": "leakage",
+  "severity": "medium",
+  "sound_evidence": "leakage sound",
+  "defect_xyz": [
+    -0.5331133008003235,
+    -0.49418482184410095,
+    0.18410462141036987
+  ],
+  "defect_radius": 0.12
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "name": "stem",
+    "file": "parts/stem.glb",
+    "keywords": [
+      "stem",
+      "spindle",
+      "handwheel"
+    ]
+  },
+  {
+    "name": "disc",
+    "file": "parts/disc.glb",
+    "keywords": [
+      "disc",
+      "plug",
+      "gate",
+      "ball"
+    ]
+  },
+  {
+    "name": "seat",
+    "file": "parts/seat.glb",
+    "keywords": [
+      "seat",
+      "leak"
+    ]
+  },
+  {
+    "name": "packing",
+    "file": "parts/packing.glb",
+    "keywords": [
+      "seal",
+      "packing",
+      "gasket"
+    ]
+  },
+  {
+    "name": "spring",
+    "file": "parts/spring.glb",
+    "keywords": [
+      "spring",
+      "actuator"
+    ]
+  }
+]

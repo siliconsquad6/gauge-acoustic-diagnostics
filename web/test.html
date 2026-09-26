@@ -1,0 +1,55 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Gauge Test</title>
+<style>
+body{margin:0;background:#0f1115;color:#eee;font-family:system-ui,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid #2a2d35;font-weight:700}
+.wrap{display:grid;grid-template-columns:340px 1fr;height:calc(100vh - 50px)}
+.side{padding:16px;border-right:1px solid #2a2d35;overflow:auto}
+label{font-size:12px;color:#aaa;display:block;margin:12px 0 4px}
+input,select,button{width:100%;padding:8px;background:#1a1d24;color:#eee;border:1px solid #333;border-radius:6px}
+button{margin-top:14px;background:#ff5a36;border:none;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5}
+.badge{margin-top:16px;padding:10px;border-radius:8px;text-align:center;font-weight:700;font-size:18px}
+.normal{background:#1b5e20}.abnormal{background:#b71c1c}
+.row{font-size:13px;margin:4px 0}.row b{color:#ff8a65}
+img{width:100%;border-radius:8px;margin-top:12px}
+iframe{width:100%;height:100%;border:0}
+pre{font-size:11px;color:#888;white-space:pre-wrap}
+</style></head><body>
+<header>Gauge test bench</header>
+<div class="wrap">
+ <div class="side">
+  <label>Audio clip (.wav, 8-channel MIMII)</label>
+  <input type="file" id="f" accept=".wav">
+  <label>Machine</label>
+  <select id="m"><option value="">auto</option><option>fan</option><option>pump</option><option>valve</option></select>
+  <button id="go">Analyze</button>
+  <div id="out"></div>
+ </div>
+ <iframe id="v" src="viewer.html?m=valve"></iframe>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+$('go').onclick = async () => {
+  const file = $('f').files[0];
+  if (!file) return alert('Pick a .wav first');
+  const fd = new FormData(); fd.append('file', file);
+  if ($('m').value) fd.append('machine', $('m').value);
+  $('go').disabled = true; $('out').innerHTML = '<p>Analyzing...</p>';
+  const t = Date.now();
+  try {
+    const r = await (await fetch('/analyze', {method: 'POST', body: fd})).json();
+    if (r.error) throw new Error(r.error);
+    let h = `<div class="badge ${r.status}">${r.status.toUpperCase()} · ${(r.score*100).toFixed(1)}%</div>`;
+    if (r.diag) {
+      const d = r.diag;
+      h += `<div class="row"><b>Machine:</b> ${r.machine}</div><div class="row"><b>Component:</b> ${d.likely_component}</div>
+            <div class="row"><b>Fault:</b> ${d.fault}</div><div class="row"><b>Severity:</b> ${d.severity}</div>
+            <div class="row"><b>Heard:</b> ${d.sound_evidence}</div><img src="${r.image_url}?t=${t}">`;
+      $('v').src = r.viewer_url + '&t=' + t;
+    }
+    h += `<pre>${((Date.now()-t)/1000).toFixed(1)} s\n${JSON.stringify(r, null, 1)}</pre>`;
+    $('out').innerHTML = h;
+  } catch (e) { $('out').innerHTML = `<p style="color:#f66">${e.message}</p>`; }
+  $('go').disabled = false;
+};
+</script></body></html>

@@ -1,0 +1,13 @@
+{
+  "machine": "valve",
+  "likely_component": "valve",
+  "fault": "leakage",
+  "severity": "medium",
+  "sound_evidence": "clicking and ticking sounds",
+  "defect_xyz": [
+    -0.4619492958404314,
+    -0.44137827986824896,
+    0.16113718423799273
+  ],
+  "defect_radius": 0.12
+}

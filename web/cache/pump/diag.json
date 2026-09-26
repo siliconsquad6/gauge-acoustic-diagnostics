@@ -1,0 +1,13 @@
+{
+  "machine": "pump",
+  "likely_component": "impeller",
+  "fault": "clogging or contamination at the impeller",
+  "severity": "medium",
+  "sound_evidence": "abnormal noise",
+  "defect_xyz": [
+    0.22380726409028606,
+    0.1401505668815036,
+    0.2307359932465247
+  ],
+  "defect_radius": 0.12
+}

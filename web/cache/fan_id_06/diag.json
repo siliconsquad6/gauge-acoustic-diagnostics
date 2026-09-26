@@ -1,0 +1,14 @@
+{
+  "machine": "fan",
+  "likely_component": "bearing",
+  "fault": "grinding from a worn drive-end bearing",
+  "severity": "medium",
+  "sound_evidence": "clicking and clacking",
+  "defect_xyz": [
+    0.35737207955038724,
+    0.24052898677619733,
+    0.40054481530952496
+  ],
+  "defect_radius": 0.12,
+  "unit": "id_06"
+}

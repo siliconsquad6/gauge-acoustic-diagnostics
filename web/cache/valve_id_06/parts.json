@@ -1,0 +1,54 @@
+[
+  {
+    "name": "seat",
+    "file": "parts/seat.glb",
+    "keywords": [
+      "seat",
+      "orifice",
+      "contamin",
+      "clog",
+      "debris",
+      "body",
+      "leak"
+    ]
+  },
+  {
+    "name": "diaphragm",
+    "file": "parts/diaphragm.glb",
+    "keywords": [
+      "diaphragm",
+      "membrane",
+      "seal",
+      "gasket"
+    ]
+  },
+  {
+    "name": "plunger",
+    "file": "parts/plunger.glb",
+    "keywords": [
+      "plunger",
+      "armature",
+      "stem",
+      "stick",
+      "core"
+    ]
+  },
+  {
+    "name": "spring",
+    "file": "parts/spring.glb",
+    "keywords": [
+      "spring"
+    ]
+  },
+  {
+    "name": "coil",
+    "file": "parts/coil.glb",
+    "keywords": [
+      "coil",
+      "solenoid",
+      "electrical",
+      "voltage",
+      "magnet"
+    ]
+  }
+]

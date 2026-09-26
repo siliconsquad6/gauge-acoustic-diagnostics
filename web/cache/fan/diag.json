@@ -1,0 +1,13 @@
+{
+  "machine": "fan",
+  "likely_component": "shaft",
+  "fault": "vibration along the shaft (misalignment or imbalance)",
+  "severity": "medium",
+  "sound_evidence": "continuous_vibration|whining_sound",
+  "defect_xyz": [
+    0.294262899267989,
+    0.15527216267007174,
+    0.38573852724450475
+  ],
+  "defect_radius": 0.12
+}

@@ -1,0 +1,14 @@
+{
+  "machine": "pump",
+  "likely_component": "impeller",
+  "fault": "clogging",
+  "severity": "medium",
+  "sound_evidence": "whirring and gurgling",
+  "defect_xyz": [
+    -0.2666578376203851,
+    -0.365757443417336,
+    0.7120456517175977
+  ],
+  "defect_radius": 0.12,
+  "unit": "id_06"
+}

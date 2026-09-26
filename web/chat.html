@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gauge | Repair Assistant</title>
+<style>
+:root{--bg:#0b0d11;--panel:#12151b;--panel2:#171b22;--line:#232833;--text:#e7e9ee;--muted:#8a93a3;--accent:#0a84ff;--ok:#2fbf71;--bad:#ef4444;--warn:#f5a524}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+.brand a{color:inherit;text-decoration:none}
+.logo{width:26px;height:26px;border-radius:7px;background:conic-gradient(from 210deg,#0071e3,#34c7ff,#0071e3);position:relative}
+.logo:after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--bg)}
+.muted{color:var(--muted)}
+main{display:grid;grid-template-columns:340px 1fr;gap:18px;padding:18px 24px;height:calc(100vh - 57px)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h3{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
+.status{padding:10px 12px;border-radius:9px;font-weight:800;background:#2a1111;color:var(--bad);border:1px solid #5c1f1f;margin-bottom:12px}
+.kv{display:grid;grid-template-columns:100px 1fr;gap:6px 10px;font-size:13px}
+.kv span:nth-child(odd){color:var(--muted)}
+.pill{display:inline-block;padding:1px 9px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase}
+.sev-low{background:#1d3325;color:var(--ok)}.sev-medium{background:#3a2c10;color:var(--warn)}.sev-high{background:#3a1515;color:var(--bad)}
+.thumb{width:100%;border-radius:10px;margin-top:12px;background:#fff}
+.links{display:flex;gap:8px;margin-top:12px}
+.links a{flex:1;text-align:center;padding:8px;border:1px solid var(--line);border-radius:8px;color:var(--text);text-decoration:none;font-size:12.5px;background:var(--panel2)}
+.links a:hover{border-color:var(--accent)}
+.side{display:flex;flex-direction:column;gap:14px;overflow:auto}
+.chat{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;min-height:0}
+.chat-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.chat-head b{font-size:15px}
+#log{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:78%;padding:11px 14px;border-radius:12px;white-space:normal}
+.msg.user{align-self:flex-end;background:#0a2a4a;border:1px solid #0f3d6b}
+.msg.bot{align-self:flex-start;background:var(--panel2);border:1px solid var(--line)}
+.msg.bot b{color:#fff}
+.cite{color:var(--accent);text-decoration:none;font-weight:700;font-size:12px}
+.srcs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.srcs a{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 7px;text-decoration:none}
+.srcs a:hover{color:var(--text);border-color:var(--accent)}
+.typing:after{content:"▍";animation:blink 1s infinite;color:var(--accent)}
+@keyframes blink{50%{opacity:0}}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 10px}
+.chips button{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:6px 12px;font-size:12.5px;cursor:pointer}
+.chips button:hover{border-color:var(--accent)}
+form{display:flex;gap:10px;padding:14px 18px;border-top:1px solid var(--line)}
+input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px 13px;font-size:14px;outline:none}
+input:focus{border-color:var(--accent)}
+form button{background:var(--accent);border:0;color:#fff;font-weight:700;border-radius:9px;padding:0 18px;cursor:pointer}
+form button:disabled{opacity:.45}
+.note{font-size:11.5px;color:var(--muted);padding:0 18px 12px}
+body.embed header,body.embed .side,body.embed .chat-head{display:none}
+body.embed main{grid-template-columns:1fr;grid-template-rows:1fr;height:100vh;padding:0}
+body.embed .chat{border:0;border-radius:0;height:auto}
+body.embed .msg{max-width:92%}
+body.embed{--bg:#fff;--panel:#fff;--panel2:#f5f5f7;--line:#e5e5ea;--text:#1d1d1f;--muted:#6e6e73;--accent:#0071e3}
+body.embed .msg.user{background:#e8f1fd;border-color:#cfe3fb}
+body.embed .msg.bot b{color:#1d1d1f}
+@media(max-width:900px){main{grid-template-columns:1fr;height:auto}.chat{height:80vh}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo"></div><a href="/">Gauge</a> <span class="muted" style="font-weight:500">Repair Assistant</span></div>
+  <div class="muted" style="font-size:12px">Answers come only from the maintenance manuals, on-device</div>
+</header>
+<main>
+  <div class="side">
+    <div class="card" id="incCard">
+      <h3>Incident</h3>
+      <div id="inc"><span class="muted">No incident attached. Ask anything about fan, pump or valve maintenance.</span></div>
+    </div>
+    <div class="card">
+      <h3>Manuals in use</h3>
+      <div id="manuals" class="muted" style="font-size:12.5px">Sources appear here as the assistant cites them.</div>
+    </div>
+  </div>
+
+  <div class="chat">
+    <div class="chat-head"><b>Ask the manual</b><span class="muted" style="font-size:12px" id="mtag"></span></div>
+    <div id="log"></div>
+    <div class="chips" id="chips">
+      <button>What parts and tools do I need?</button>
+      <button>What usually causes this?</button>
+      <button>How do I verify the fix?</button>
+      <button>What safety steps come first?</button>
+    </div>
+    <form id="f"><input id="q" placeholder="Ask about this repair..." autocomplete="off"><button id="send">Send</button></form>
+    <div class="note">Always follow your site's lockout/tagout procedure. Verify specs against the manufacturer's documentation for your exact model.</div>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
+const iid = Q.get('incident'), part = Q.get('part'), partIsFault = Q.get('fault') !== '0', mq = Q.get('m');
+if (Q.get('embed') === '1') document.body.classList.add('embed');
+const history = [], seen = new Map();
+let inc = null;
+
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function render(text, sources){
+  let h = esc(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  return h.replace(/\[(\d+)\]/g, (m, n) => { const s = sources[n-1]; return s ? `<a class="cite" href="${s.url}" target="_blank" title="${esc(s.title)}, p.${s.page}">[${n}]</a>` : m; });
+}
+function bubble(role, html){
+  const d = document.createElement('div'); d.className = 'msg ' + role; d.innerHTML = html;
+  $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight; return d;
+}
+function noteSources(src){
+  src.forEach(s => seen.set(s.title + s.page, s));
+  const byTitle = {};
+  [...seen.values()].forEach(s => (byTitle[s.title] = byTitle[s.title] || []).push(s));
+  $('manuals').innerHTML = Object.entries(byTitle).map(([t, arr]) =>
+    `<div style="margin-bottom:8px"><div style="color:var(--text)">${esc(t)}</div>${arr.sort((a,b)=>a.page-b.page).map(s=>`<a class="cite" href="${s.url}" target="_blank">p.${s.page}</a>`).join(' ')}</div>`).join('');
+}
+
+async function ask(q){
+  if (!q.trim()) return;
+  $('send').disabled = true;
+  bubble('user', esc(q));
+  history.push({role: 'user', content: q});
+  const b = bubble('bot', '<span class="typing">Reading the manuals</span>');
+  let text = '', sources = [], head = true, buf = '';
+  try {
+    const res = await fetch('/chat', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({incident: iid, messages: history})});
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    const rd = res.body.getReader(), dec = new TextDecoder();
+    while (true) {
+      const {value, done} = await rd.read(); if (done) break;
+      buf += dec.decode(value, {stream: true});
+      if (head) { const i = buf.indexOf('\n'); if (i < 0) continue; const meta = JSON.parse(buf.slice(0, i)); sources = meta.sources; $('mtag').textContent = meta.machine ? 'Machine: ' + meta.machine : ''; buf = buf.slice(i + 1); head = false; }
+      text = buf;
+      b.innerHTML = render(text, sources) + '<span class="typing"></span>';
+      $('log').scrollTop = $('log').scrollHeight;
+    }
+    b.innerHTML = render(text, sources) + (sources.length ? '<div class="srcs">' + sources.map(s => `<a href="${s.url}" target="_blank">[${s.n}] ${esc(s.title)}, p.${s.page}</a>`).join('') + '</div>' : '');
+    noteSources(sources);
+    history.push({role: 'assistant', content: text});
+  } catch (e) { b.innerHTML = `<span style="color:#ff8a8a">${esc(e.message)}</span>`; history.pop(); }
+  $('send').disabled = false; $('q').focus();
+}
+
+$('f').onsubmit = e => { e.preventDefault(); const q = $('q').value; $('q').value = ''; ask(q); };
+document.querySelectorAll('#chips button').forEach(bt => bt.onclick = () => ask(bt.textContent));
+
+(async () => {
+  if (!iid) {
+    if (part) return ask(`How do I inspect and repair the ${part} on a ${mq || 'machine'}?`);
+    bubble('bot', 'Hi, I answer from the maintenance manuals loaded on this Nano. Ask about a fan, pump or valve repair.'); return;
+  }
+  try {
+    const r = await fetch('/incident/' + iid); inc = await r.json();
+    if (inc.error) throw new Error(inc.error);
+    const d = inc.diag || {}, sev = (d.severity || 'medium').toLowerCase();
+    $('inc').innerHTML = `<div class="status">ABNORMAL · ${(inc.score*100).toFixed(0)}%</div>
+      <div class="kv"><span>Machine</span><span style="text-transform:capitalize">${inc.machine}</span>
+      <span>Component</span><span>${esc(d.likely_component||'?')}</span><span>Fault</span><span>${esc(d.fault||'?')}</span>
+      <span>Severity</span><span><span class="pill sev-${sev}">${sev}</span></span><span>Heard</span><span>${esc(d.sound_evidence||'?')}</span></div>
+      <img class="thumb" src="${inc.image_url}" alt="">
+      <div class="links"><a href="/viewer.html?m=${inc.cache_key || inc.machine}" target="_blank">3D view</a><a href="/viewer.html?m=${inc.cache_key || inc.machine}&compare=1" target="_blank">Compare + print</a></div>`;
+    if (part && !partIsFault) ask(`How do I inspect the ${part} on this ${inc.machine}, and what signs of wear should I look for?`);
+    else ask(`The ${part || d.likely_component || 'component'} on this ${inc.machine} shows "${d.fault || 'an anomaly'}". How do I fix it?`);
+  } catch (e) { $('inc').innerHTML = `<span class="muted">Incident ${esc(iid)} not found (the server may have restarted).</span>`; }
+})();
+</script>
+</body>
+</html>

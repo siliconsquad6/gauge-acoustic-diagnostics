@@ -1,0 +1,14 @@
+{
+  "machine": "valve",
+  "likely_component": "seat",
+  "fault": "contamination at the valve seat",
+  "severity": "medium",
+  "sound_evidence": "repeated clicking",
+  "defect_xyz": [
+    -0.07714347965683015,
+    -0.08716146654438418,
+    0.438451043754859
+  ],
+  "defect_radius": 0.12,
+  "unit": "id_00"
+}

@@ -1,0 +1,51 @@
+[
+  {
+    "name": "impeller",
+    "file": "parts/impeller.glb",
+    "keywords": [
+      "impeller",
+      "vane",
+      "rotor",
+      "clog",
+      "cavitation",
+      "contamin"
+    ]
+  },
+  {
+    "name": "seal",
+    "file": "parts/seal.glb",
+    "keywords": [
+      "seal",
+      "leak",
+      "gasket",
+      "packing"
+    ]
+  },
+  {
+    "name": "bearing",
+    "file": "parts/bearing.glb",
+    "keywords": [
+      "bearing"
+    ]
+  },
+  {
+    "name": "shaft",
+    "file": "parts/shaft.glb",
+    "keywords": [
+      "shaft",
+      "coupling",
+      "misalign"
+    ]
+  },
+  {
+    "name": "motor",
+    "file": "parts/motor.glb",
+    "keywords": [
+      "motor",
+      "winding",
+      "stator",
+      "electrical",
+      "voltage"
+    ]
+  }
+]
