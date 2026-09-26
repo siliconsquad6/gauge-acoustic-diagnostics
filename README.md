@@ -4,7 +4,7 @@
 
 ### Edge AI that hears machine faults, shows where they are in 2D and 3D, and guides the repair.
 
-**Runs on one HP ZGX Nano (NVIDIA GB10). No cloud AI. Raw audio is never stored or sent.**
+**Runs on one HP ZGX Nano (NVIDIA GB10), served with HP Z Runtime (ZRT). No cloud AI. Raw audio is never stored or sent.**
 
 ![Hardware](https://img.shields.io/badge/HP%20ZGX%20Nano-NVIDIA%20GB10-76B900)
 ![Track](https://img.shields.io/badge/HackSJSU%202026-Generative%20AI%20%26%20Creative%20Tech-0055A2)
@@ -51,7 +51,7 @@ flowchart TD
     A --> D["Qwen2.5-Omni + LoRA<br/>which machine type?"]
     A --> E["Unit fingerprint<br/>(logistic regression)<br/>which unit?"]
     C -->|normal| N["Show health history<br/>and unit 3D model"]
-    C -->|abnormal| F["Qwen2.5-Omni (base)<br/>listens and describes the fault"]
+    C -->|abnormal| F["Qwen2.5-Omni (base) on HP ZRT<br/>listens and describes the fault"]
     F --> G["Part picker<br/>spectral centroid bins"]
     G --> H["Prebuilt visuals<br/>manual figure / cutaway / 3D GLB"]
     H --> I["Dashboard + 3D viewer"]
@@ -80,7 +80,7 @@ flowchart TD
 |---|---|---|---|---|
 | Fault detector | **GaugeNet**: `MIT/ast-finetuned-audioset-10-10-0.4593` + 8-mic attention fusion + frequency attention head | Fine-tuned on MIMII fan + pump, 0 dB and 6 dB | `ast_model_training_scripts/train_guage.py` | `~/Desktop/edge-ai/runs/gauge_combined/best_model.pt` |
 | Machine type | **Qwen2.5-Omni** (thinker) + LoRA | LoRA fine-tune on MIMII fan, pump, valve | `app/finetune_omni.py` | `models/omni-gauge-lora/` |
-| Fault description + chatbot | **Qwen2.5-Omni** (base, adapter disabled) | Used as-is, prompted | `app/server.py` | none |
+| Fault description + chatbot | **Qwen2.5-Omni** (base) served by **HP Z Runtime (ZRT)** on the Nano, with tool calling | Used as-is, prompted | `zrt serve`, `app/vllm_client.py` | OpenAI-compatible endpoint on port 8080 |
 | Unit fingerprint | Log-mel + spectral stats → **Logistic regression** | Trained on MIMII units | `app/train_asset.py` | `models/asset_id.joblib` |
 | Part picker | Spectral centroid percentile bins | Calibrated on MIMII abnormal clips | `app/calib_parts.py` | `models/part_bins.json` |
 | Manual search | **BAAI/bge-small-en-v1.5** embeddings | Used as-is | `app/ingest_manuals.py` | `manuals/index.npz`, `manuals/chunks.json` |
@@ -181,7 +181,6 @@ The scripts use fixed paths. Match this layout exactly and everything runs witho
 
 ```
 ~/Desktop/
-├── data  ->  ~/Desktop/edge-ai/data          (symlink, see step 4)
 └── edge-ai/
     ├── data/
     │   ├── 0_dB_fan/fan/id_00/{normal,abnormal}/*.wav
@@ -191,17 +190,18 @@ The scripts use fixed paths. Match this layout exactly and everything runs witho
     │   ├── combined_data_shuffled/           (created by merge_mimii_data.py)
     │   └── features_8mic/                    (created by data_preprocessing.py)
     ├── runs/gauge_combined/best_model.pt     (created by train_guage.py)
-    └── gauge/                                <- this repository
-        └── models/
-            ├── omni/                          Qwen2.5-Omni weights
-            ├── qwen-image/                    Qwen-Image weights
-            ├── omni-gauge-lora/               LoRA adapter
-            ├── asset_id.joblib
-            └── part_bins.json
+    └── Sreeram/
+        └── gauge/                            <- this repository
+            └── models/
+                ├── omni/                      Qwen2.5-Omni weights
+                ├── qwen-image/                Qwen-Image weights
+                ├── omni-gauge-lora/           LoRA adapter
+                ├── asset_id.joblib
+                └── part_bins.json
 ~/Downloads/6_dB_valve/valve/id_00/...        valve clips (the app scripts look for ~/Downloads/*valve*)
 ```
 
-> **Why two data locations?** The AST scripts read `~/Desktop/edge-ai/data`. The `app/` scripts read `~/Desktop/data/combined_data_sh*` and `~/Downloads/*valve*`. The symlink in step 4 makes both work.
+> **Why this exact nesting?** The AST scripts read `~/Desktop/edge-ai/data` and `~/Desktop/edge-ai/runs`. The `app/` scripts look two folders above `gauge/` for `data/` (here `~/Desktop/edge-ai/data`) and in `~/Downloads/*valve*`. With the repo at `edge-ai/<name>/gauge`, both point at the same data. If you put `gauge` directly in `edge-ai`, add a symlink: `ln -s ~/Desktop/edge-ai/data ~/Desktop/data`.
 
 ---
 
@@ -229,12 +229,12 @@ The scripts use fixed paths. Match this layout exactly and everything runs witho
 ### Step 1. Clone the repo into the expected place
 
 ```bash
-mkdir -p ~/Desktop/edge-ai && cd ~/Desktop/edge-ai
+mkdir -p ~/Desktop/edge-ai/Sreeram && cd ~/Desktop/edge-ai/Sreeram
 git clone --recurse-submodules https://github.com/siliconsquad6/gauge-acoustic-diagnostics.git gauge
 cd gauge
 ```
 
-**What this does:** gets the code and pulls Hunyuan3D-2 as a submodule. The folder must be named `gauge`, because the scripts compute paths from it.
+**What this does:** gets the code and pulls Hunyuan3D-2 as a submodule. The folder must be named `gauge` and sit two levels below `edge-ai`, because the scripts compute paths from it (see [section 5](#5-folder-layout-the-code-expects)).
 
 ---
 
@@ -298,8 +298,6 @@ cd ~/Desktop/edge-ai && mkdir -p data && cd data
 for f in 0_dB_fan 6_dB_fan 0_dB_pump 6_dB_pump; do mkdir -p $f && unzip -q $f.zip -d $f; done
 mkdir -p ~/Downloads/6_dB_valve && unzip -q 6_dB_valve.zip -d ~/Downloads/6_dB_valve
 
-# let the app/ scripts find the same data
-ln -s ~/Desktop/edge-ai/data ~/Desktop/data
 ```
 
 **Check:** `ls ~/Desktop/edge-ai/data/0_dB_fan/fan` should show `id_00 id_02 id_04 id_06`.
@@ -309,7 +307,7 @@ ln -s ~/Desktop/edge-ai/data ~/Desktop/data
 ### Step 5. Train the fault detector (GaugeNet)
 
 ```bash
-cd ~/Desktop/edge-ai/gauge
+cd ~/Desktop/edge-ai/Sreeram/gauge
 python ast_model_training_scripts/merge_mimii_data.py
 python ast_model_training_scripts/data_preprocessing.py
 python ast_model_training_scripts/train_guage.py
@@ -421,6 +419,7 @@ bash apply_patches.sh
 | `patch_assets.py` | unit fingerprint and per-unit visuals |
 | `patch_parts.py` | part chosen from the sound's frequency (calibrated bins) |
 | `patch_final.py` | normal clips also get their unit's 3D model |
+| `patch_vllm.py` | Omni through the ZRT / vLLM endpoint, tool-calling repair chat, `/engine` status, PyTorch fallback |
 
 ---
 
@@ -436,13 +435,97 @@ Every line should be a green ✔: app files, web files, models, manuals, patches
 
 ### Step 12. Launch
 
+**12a. Serve Qwen2.5-Omni with HP Z Runtime (ZRT)**
+
+ZRT is HP's model runtime, installed on the ZGX Nano with the ZGX Toolkit. It pulls models from Hugging Face and serves them with **vLLM** behind an **OpenAI-compatible API** on port 8080. On our Nano it was set up in system mode, so no `--mode` flag is needed.
+
 ```bash
-cd ~/Desktop/edge-ai/gauge
-conda activate gauge
-python app/server.py
+# one time: let local apps call the ZRT proxy
+zrt config set proxy.auth.type none
+zrt config set proxy.tls.enabled false
+
+# download the model into ZRT's cache (about 22 GB)
+zrt pull hf:Qwen/Qwen2.5-Omni-7B
+
+# serve it (stop the Gauge server first so there is GPU memory free)
+zrt serve hf:Qwen/Qwen2.5-Omni-7B --label gauge-omni --gpu-memory-fraction 0.35 \
+  --extra "--max-model-len=8192" --extra "--dtype=bfloat16" \
+  --extra "--enable-auto-tool-choice" --extra "--tool-call-parser=hermes"
+
+# check it
+zrt services                      # gauge-omni, http://127.0.0.1:8080, Ready
+curl 127.0.0.1:8080/v1/models     # {"data":[{"id":"gauge-omni", ...}]}
 ```
 
-Wait for `READY on http://0.0.0.0:8000` (Omni takes a few minutes to load, once).
+**Concept:** vLLM (inside ZRT) is a fast LLM inference engine with PagedAttention and continuous batching. ZRT handles download, integrity checks, the proxy, logs and metrics. Qwen2.5-Omni takes audio in and writes text out, and supports **tool calling**. The repair assistant can decide on its own to call:
+
+| Tool | What it does |
+|---|---|
+| `search_manuals` | pulls more manual excerpts, numbered for citations |
+| `get_incident` | reads the current fault: machine, unit, score, part |
+| `get_part_visual` | returns the image and 3D viewer link for a part |
+| `get_machine_history` | recent health scores, to judge if it is getting worse |
+
+**12b. Start Gauge, pointed at ZRT:**
+
+```bash
+cd ~/Desktop/edge-ai/Sreeram/gauge
+conda activate gauge
+python patch_vllm.py              # once; says "already patched" after that
+GAUGE_VLLM=1 GAUGE_VLLM_URL=http://127.0.0.1:8080/v1 GAUGE_VLLM_MODEL=gauge-omni python app/server.py
+```
+
+Wait for `READY on http://0.0.0.0:8000` and `Omni engine: vLLM at http://127.0.0.1:8080/v1`.
+
+**Which model runs where (all on the Nano):**
+
+| Model | Trained by us | Runs in | Job |
+|---|---|---|---|
+| GaugeNet (AST) | Yes | Gauge server (PyTorch) | normal / abnormal score + evidence |
+| Qwen2.5-Omni + our LoRA | Yes (LoRA) | Gauge server (PyTorch) | which machine: fan, pump or valve |
+| Qwen2.5-Omni | No (base) | **ZRT** (vLLM) | fault description + tool-calling repair chat |
+| Unit fingerprint, part bins, bge-small | Yes / calibrated / no | Gauge server | unit id, likely part, manual search |
+
+> **Why AST is not in ZRT:** ZRT serves language models that generate text through vLLM. GaugeNet is a custom classifier that outputs a score, so the Gauge server runs it directly on the GB10.
+>
+> **Fallback:** if ZRT is not running or rejects a request, Gauge prints `using PyTorch` and answers with its own copy of Omni, so the demo never breaks. Without `GAUGE_VLLM=1`, Gauge runs fully in PyTorch as before.
+
+**Proof that it runs on the Nano through ZRT**
+
+| Check | What you see |
+|---|---|
+| `zrt services` | `gauge-omni`, `http://127.0.0.1:8080`, **Ready**, ~41 GB VRAM |
+| `http://<zgx-ip>:8000/engine` | `{"omni_engine":"vLLM","vllm_url":"http://127.0.0.1:8080/v1","vllm":{"ok":true,"models":["gauge-omni"]},"gpu":"NVIDIA GB10"}` |
+| `zrt metrics display` | request count, tokens and latency go up after each abnormal clip |
+| `zrt metrics monitor` | live dashboard, good to keep open during a demo |
+
+> Each ZRT diagnosis takes about 25 s end to end (time to first token about 0.25 s).
+
+<details>
+<summary><b>Optional: serve our fine-tuned Omni through ZRT</b></summary>
+
+ZRT loads models from Hugging Face, so the LoRA has to be merged and uploaded first:
+
+```bash
+huggingface-cli login                           # write token for siliconsquad6
+python merge_and_push.py siliconsquad6/gauge-omni-7b
+zrt serve hf:siliconsquad6/gauge-omni-7b --label gauge-omni --gpu-memory-fraction 0.35 \
+  --extra "--enable-auto-tool-choice" --extra "--tool-call-parser=hermes"
+```
+
+`push_ast.py siliconsquad6/gauge-ast` uploads GaugeNet's weights and results to Hugging Face for reproducibility.
+
+</details>
+
+<details>
+<summary><b>Alternative without ZRT: NVIDIA vLLM container</b></summary>
+
+```bash
+bash serve_vllm.sh      # port 8001
+GAUGE_VLLM=1 GAUGE_VLLM_URL=http://127.0.0.1:8001/v1 python app/server.py
+```
+
+</details>
 
 | Page | URL |
 |---|---|
@@ -507,6 +590,8 @@ curl -F "file=@clip.wav" -F "machine=pump" http://localhost:8000/analyze
 | `GET` | `/incident/{id}` | incident id | the saved analysis |
 | `POST` | `/chat` | `{"incident": id, "messages": [...]}` | streamed answer; first line is JSON with `sources` |
 | `GET` | `/manuals/...` | PDF path | manual PDFs for citations |
+| `GET` | `/engine` | none | which engine serves Omni, vLLM model list, GPU name |
+| `POST` | `:8080/v1/chat/completions` | OpenAI format | the ZRT endpoint on the Nano (localhost only) |
 
 ---
 
@@ -530,11 +615,15 @@ curl -F "file=@clip.wav" -F "machine=pump" http://localhost:8000/analyze
 |---|---|
 | `best_model.pt` not found | The server reads `~/Desktop/edge-ai/runs/gauge_combined/`. Run step 5, or copy the file there. |
 | `omni-gauge-lora` not found | Run the symlink in step 6. The training script saves `omni-gauge-lora-machine`. |
-| `No abnormal clips found` / roots empty in `app/` scripts | Missing `~/Desktop/data` symlink or valve data not under `~/Downloads/*valve*`. See step 4. |
+| `No abnormal clips found` / roots empty in `app/` scripts | `gauge` is not at `edge-ai/<name>/gauge` (see section 5), or valve data is not under `~/Downloads/*valve*`. |
 | AST state dict key errors | Newer `transformers` renamed AST layers. `server.py` remaps keys automatically. If `predict.py` fails, use the same remap there. |
 | `Need an 8-channel 16 kHz MIMII wav` | GaugeNet uses all 8 mics. Mono or stereo files are rejected. |
 | CUDA out of memory during builds | Stop the server first. Image and 3D generation need the whole GPU. |
 | Manuals not loaded | Run step 8. The chatbot needs `manuals/chunks.json` and `index.npz`. |
+| `Error: ZRT has not been set up yet for your user` | ZRT is installed in system mode. Drop `--mode user`. |
+| ZRT service fails to start | `zrt logs`, or read the log path printed by `zrt serve`. Lower `--gpu-memory-fraction` if memory is short. |
+| Terminal shows `using PyTorch` | ZRT did not answer. Check `zrt services` and `curl 127.0.0.1:8080/v1/models`. |
+| Browser shows plain `404 page not found` | That is the ZRT proxy, not Gauge. Open the Nano's Tailscale IP on port 8000 instead. |
 | 3D viewer is blank | `viewer.html` loads three.js from the jsDelivr CDN, so the viewing browser needs internet once. |
 
 **Known scope limits**
