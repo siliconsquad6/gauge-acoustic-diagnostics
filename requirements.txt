@@ -1,0 +1,46 @@
+# Gauge: Python dependencies (HP ZGX Nano, NVIDIA GB10, ARM64, Python 3.10+)
+#
+# 1) Install PyTorch + torchaudio with CUDA for your platform FIRST (pytorch.org selector, ARM64 + CUDA).
+#    They are listed below only so pip knows they are required; it will not replace a working CUDA build.
+# 2) pip install -r requirements.txt
+# 3) Hunyuan3D-2 (hy3dgen) comes from the git submodule:
+#      cd Hunyuan3D-2 && pip install -r requirements.txt && pip install -e . && cd ..
+# 4) Model serving (Qwen2.5-Omni) runs in HP Z Runtime (ZRT), which ships its own vLLM. No vLLM install needed here.
+#
+# For exact versions from the Nano, run:  pip freeze > requirements-lock.txt
+
+# --- deep learning ---
+torch
+torchaudio
+transformers>=4.52        # Qwen2.5-Omni support
+accelerate
+peft                      # LoRA fine-tune + adapter loading
+qwen-omni-utils           # audio preprocessing for Qwen2.5-Omni
+diffusers                 # Qwen-Image (install from git if Qwen-Image fails to load)
+sentence-transformers     # bge-small embeddings for the manuals
+huggingface_hub
+
+# --- audio ---
+soundfile
+librosa
+
+# --- data / classic ML ---
+numpy
+pandas
+scipy
+scikit-learn
+scikit-image
+joblib
+
+# --- images, 3D, PDFs ---
+pillow
+opencv-python
+trimesh
+pymupdf                   # imported as fitz
+
+# --- web server ---
+fastapi
+uvicorn
+python-multipart          # file uploads in /analyze
+pydantic
+requests                  # ntfy alerts + ZRT endpoint calls
